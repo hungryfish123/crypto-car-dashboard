@@ -16,12 +16,13 @@ export const isSupabaseConfigured = isConfigured;
 
 // Test connection on load (check browser console for result)
 if (supabase) {
-    supabase.from('user_data').select('count', { count: 'exact', head: true })
+    supabase.from('player_data').select('count', { count: 'exact', head: true })
         .then(({ count, error }) => {
             if (error) {
                 console.log('🔴 Supabase connection FAILED:', error.message);
+                console.log('💡 Hint: Make sure to run supabase/player_data.sql in your Supabase SQL Editor');
             } else {
-                console.log('🟢 Supabase connected! user_data table has', count, 'rows');
+                console.log('🟢 Supabase connected! player_data table has', count, 'rows');
             }
         });
 }

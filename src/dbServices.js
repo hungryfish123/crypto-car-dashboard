@@ -35,6 +35,7 @@ export const fetchUserData = async (walletAddress) => {
     }
 
     try {
+        console.log('[DB] Fetching data for wallet:', walletAddress);
         // Check if user exists
         let { data, error } = await supabase
             .from('player_data')
@@ -59,10 +60,11 @@ export const fetchUserData = async (walletAddress) => {
                 .single();
 
             if (insertError) {
-                console.error('Error creating new user:', insertError);
+                console.error('[DB] Error creating new user:', insertError);
                 // Fallback to local data
                 return { wallet_id: walletAddress, ...DEFAULT_USER_DATA, referral_code: newReferralCode };
             }
+            console.log('[DB] New user created successfully!');
             return newData;
         }
 
@@ -103,9 +105,9 @@ export const saveUserData = async (walletAddress, gameState) => {
             .eq('wallet_id', walletAddress);
 
         if (error) {
-            console.error('Error saving user data:', error);
+            console.error('[DB] Error saving user data:', error);
         } else {
-            console.log('Progress saved to Supabase');
+            console.log('[DB] ✅ Progress saved to Supabase for:', walletAddress);
         }
     } catch (err) {
         console.error('Unexpected error in saveUserData:', err);
