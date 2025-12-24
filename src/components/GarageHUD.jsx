@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Package } from 'lucide-react';
+import { Zap, Package, X } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
 import SolanaPanel from './SolanaPanel';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, setDraggedItem, draggedItem }) => {
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem }) => {
     const { playHover } = useAudio();
 
     const getRarityStyles = (level) => {
@@ -68,10 +68,14 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                         <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'none' }}>
                             <div className="grid grid-cols-2 gap-4">
                                 {inventory.map((item) => {
+                                    // Check if item is currently equipped on THIS car
+                                    const isEquipped = Object.values(equippedParts).some(p => p && p.id === item.id);
+
                                     const rarityLabels = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'LEGENDARY', 'GOD TIER'];
                                     const rarityLabel = rarityLabels[Math.min(item.rarityLevel - 1, 6)] || 'COMMON';
                                     const isBeingDragged = draggedItem && draggedItem.id === item.id;
                                     const getRarityBorder = (level) => {
+                                        if (isEquipped) return 'border-red-500/50 hover:border-red-500 shadow-[0_0_15px_rgba(220,38,38,0.3)]';
                                         switch (level) {
                                             case 1: return 'border-white/10 hover:border-gray-400';
                                             case 2: return 'border-green-500/20 hover:border-green-500';
@@ -83,17 +87,37 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                         }
                                     };
                                     return (
-                                        <div key={item.id} draggable="true"
-                                            onDragStart={(e) => { if (setDraggedItem) setDraggedItem(item); e.dataTransfer.setData('item', JSON.stringify(item)); e.dataTransfer.effectAllowed = 'move'; }}
+                                        <div key={item.id} draggable={!isEquipped}
+                                            onDragStart={(e) => {
+                                                if (isEquipped) { e.preventDefault(); return; }
+                                                if (setDraggedItem) setDraggedItem(item);
+                                                e.dataTransfer.setData('item', JSON.stringify(item));
+                                                e.dataTransfer.effectAllowed = 'move';
+                                            }}
                                             onDragEnd={() => { if (setDraggedItem) setDraggedItem(null); }}
                                             onMouseEnter={playHover}
-                                            className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 hover:scale-105 group ${isBeingDragged ? 'opacity-40 border-dashed scale-95 grayscale' : ''}`}>
+                                            className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 hover:scale-105 group ${isBeingDragged ? 'opacity-40 border-dashed scale-95 grayscale' : ''} ${isEquipped ? 'cursor-default ring-1 ring-red-500/50' : ''}`}>
+
+                                            {/* Rarity Label (Top Right) */}
                                             <div className={`absolute top-2 right-2 px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
+
+                                            {/* Minimal Remove Icon (Top Left) - Only if equipped */}
+                                            {isEquipped && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); unequipItem(item); }}
+                                                    className="absolute top-2 left-2 w-5 h-5 flex items-center justify-center bg-red-600/80 hover:bg-red-500 rounded text-white shadow-lg transition-transform hover:scale-110 z-20 group-hover:opacity-100"
+                                                    title="Unequip"
+                                                >
+                                                    <X size={12} strokeWidth={3} />
+                                                </button>
+                                            )}
+
                                             <div className="h-[75%] w-full flex items-center justify-center p-1">
-                                                <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className="w-full h-full object-contain drop-shadow-md p-1 group-hover:scale-110 transition-transform duration-200 pointer-events-none" onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />
+                                                <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className={`w-full h-full object-contain drop-shadow-md p-1 transition-transform duration-200 pointer-events-none ${isEquipped ? '' : 'group-hover:scale-110'}`} onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />
                                             </div>
+
                                             <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[35%]">
-                                                <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.title}</h4>
+                                                <h4 className={`text-white text-sm font-bold uppercase text-center truncate w-full leading-tight ${isEquipped ? 'text-red-400' : ''}`} style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.title}</h4>
                                                 {item.cashback && (<div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.cashback} Yield</div>)}
                                             </div>
                                         </div>

@@ -1,14 +1,32 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit, X, Lock } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import ManualBurnVerification from './ManualBurnVerification';
+import BurnerWalletDashboard from './BurnerWalletDashboard';
+import { useBurnerWallet } from '../hooks/useBurnerWallet';
 
-const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '' }) => {
-    const { user, authenticated, logout } = usePrivy();
+const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '', onRewardClaimed, onBurnerAuth }) => {
+    const { user, authenticated, logout, login } = usePrivy();
+    const burnerWallet = useBurnerWallet();
     const [copied, setCopied] = React.useState(false);
     const [codeCopied, setCodeCopied] = React.useState(false);
+    const [showBurnerWallet, setShowBurnerWallet] = React.useState(false);
+    const [burnerAuthenticated, setBurnerAuthenticated] = React.useState(false);
 
-    const walletAddress = user?.wallet?.address || '';
+    // Check localStorage for burner auth on mount
+    React.useEffect(() => {
+        const isBurnerAuth = localStorage.getItem('burner_authenticated') === 'true';
+        if (isBurnerAuth && burnerWallet.hasWallet) {
+            setBurnerAuthenticated(true);
+        }
+    }, [burnerWallet.hasWallet]);
+
+    // Combined authentication check (Privy OR Burner wallet)
+    const isAuthenticated = authenticated || burnerAuthenticated;
+
+    // Wallet address - prioritize Privy, fallback to burner
+    const walletAddress = user?.wallet?.address || (burnerAuthenticated ? burnerWallet.walletAddress : '');
     const shortAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not Connected';
 
     // Calculate stats
@@ -87,7 +105,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             {/* Pulse Effect */}
                             <div className="absolute inset-0 bg-red-500/20 blur-3xl rounded-full animate-pulse"></div>
 
-                            {authenticated && (
+                            {isAuthenticated && (
                                 <div className="absolute bottom-2 right-2 w-12 h-12 rounded-full bg-green-500 border-4 border-black flex items-center justify-center z-20">
                                     <Check size={24} className="text-white" />
                                 </div>
@@ -96,7 +114,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                         <div>
                             <h2 className="text-4xl font-bold text-white uppercase tracking-wider mb-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                                {authenticated ? 'Connected Driver' : 'Anonymous Racer'}
+                                {isAuthenticated ? (burnerAuthenticated ? 'Burner Driver' : 'Connected Driver') : 'Anonymous Racer'}
                             </h2>
                             <div className="flex items-center justify-center gap-2">
                                 <Shield size={16} className="text-yellow-500" />
@@ -104,14 +122,14 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </div>
                         </div>
 
-                        {/* Rank Progress Bar Mockup */}
+                        {/* Rank Progress Bar */}
                         <div className="w-full max-w-xs mt-4">
                             <div className="flex justify-between text-xs text-gray-500 uppercase font-bold mb-1">
-                                <span>Level 12</span>
-                                <span>1250 / 2000 XP</span>
+                                <span>Level 0</span>
+                                <span>0 / 100 XP</span>
                             </div>
                             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-red-600 to-yellow-500 w-[60%]"></div>
+                                <div className="h-full bg-gradient-to-r from-red-600 to-yellow-500 w-[0%]"></div>
                             </div>
                         </div>
                     </div>
@@ -135,14 +153,51 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
-                            <button className="flex items-center justify-center gap-2 px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white text-sm font-bold uppercase tracking-wider transition-all">
-                                <Edit size={16} /> Edit Profile
-                            </button>
-                            {authenticated && (
-                                <button onClick={logout} className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-sm font-bold uppercase tracking-wider rounded-xl transition-all">
-                                    Disconnect
-                                </button>
+                        <div className="grid grid-cols-1 gap-3">
+                            {!isAuthenticated ? (
+                                <>
+                                    <button
+                                        onClick={login}
+                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 border border-red-500/30 rounded-xl text-white text-sm font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+                                    >
+                                        <Wallet size={16} /> Connect Wallet
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            // Auto-authenticate with burner wallet
+                                            localStorage.setItem('burner_authenticated', 'true');
+                                            setBurnerAuthenticated(true);
+                                            setShowBurnerWallet(true);
+                                            if (onBurnerAuth) onBurnerAuth(burnerWallet.walletAddress);
+                                        }}
+                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold uppercase tracking-wider transition-all"
+                                    >
+                                        <Zap size={16} /> Use Burner Wallet
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setShowBurnerWallet(true)}
+                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-purple-300 text-xs font-bold uppercase tracking-wider transition-all"
+                                    >
+                                        <Zap size={14} /> Burner
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (burnerAuthenticated) {
+                                                // Disconnect burner wallet
+                                                localStorage.removeItem('burner_authenticated');
+                                                setBurnerAuthenticated(false);
+                                            } else {
+                                                logout();
+                                            }
+                                        }}
+                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
+                                    >
+                                        Disconnect
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -150,10 +205,34 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
 
                 {/* RIGHT AREA (Col span 2) */}
-                <div className="col-span-2 h-full flex flex-col gap-6">
+                <div className="col-span-2 h-full flex flex-col gap-6 relative">
+
+                    {/* Blur Overlay for Unauthenticated Users */}
+                    {!isAuthenticated && (
+                        <div className="absolute inset-0 z-30 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/60 backdrop-blur-md rounded-2xl"></div>
+                            <div className="relative z-10 text-center p-8">
+                                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+                                    <Lock size={32} className="text-gray-500" />
+                                </div>
+                                <h3 className="text-white text-xl font-bold uppercase tracking-wider mb-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
+                                    Sign In Required
+                                </h3>
+                                <p className="text-gray-400 text-sm mb-4 max-w-xs">
+                                    Connect your wallet or use a burner wallet to access your profile.
+                                </p>
+                                <button
+                                    onClick={login}
+                                    className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 rounded-xl text-white text-sm font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+                                >
+                                    Connect Wallet
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* B. TOP RIGHT: STATS ROW */}
-                    <motion.div variants={itemVariants} className="grid grid-cols-4 gap-4">
+                    <motion.div variants={itemVariants} className={`grid grid-cols-4 gap-4 ${!isAuthenticated ? 'blur-sm pointer-events-none' : ''}`}>
                         {[
                             { label: 'Total Value', value: `${(totalValue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-500', unit: 'CR' },
                             { label: 'Parts Owned', value: totalParts, icon: Package, color: 'text-blue-500', unit: 'items' },
@@ -175,57 +254,63 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                         ))}
                     </motion.div>
 
-                    {/* C. MIDDLE: REFERRAL & ACHIEVEMENTS ROW */}
-                    <div className="flex-1 grid grid-cols-2 gap-6 min-h-0">
+                    {/* C. MIDDLE: REFERRAL, BURN VERIFICATION & ACHIEVEMENTS ROW */}
+                    <div className={`flex-1 grid grid-cols-3 gap-4 min-h-0 ${!isAuthenticated ? 'blur-sm pointer-events-none' : ''}`}>
                         {/* REFERRAL MODULE */}
-                        <motion.div variants={itemVariants} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-6 flex flex-col overflow-hidden">
-                            <div className="flex items-center gap-3 mb-4">
+                        <motion.div variants={itemVariants} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-5 flex flex-col overflow-hidden">
+                            <div className="flex items-center gap-3 mb-3">
                                 <div className="p-2 bg-blue-500/10 rounded-lg">
-                                    <Zap size={18} className="text-blue-500" />
+                                    <Zap size={16} className="text-blue-500" />
                                 </div>
-                                <h3 className="text-white text-sm font-bold tracking-[0.2em] uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Referral Program</h3>
+                                <h3 className="text-white text-xs font-bold tracking-[0.15em] uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Referral</h3>
                             </div>
 
-                            <p className="text-gray-400 text-xs mb-4">Invite friends to join the race and earn <span className="text-green-400 font-bold">5% fees</span> from their winnings!</p>
+                            <p className="text-gray-400 text-[10px] mb-3">Invite friends and earn <span className="text-green-400 font-bold">5% fees</span>!</p>
 
-                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 flex items-center justify-between group hover:border-blue-500/30 transition-colors cursor-pointer mb-4" onClick={copyReferral}>
+                            <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between group hover:border-blue-500/30 transition-colors cursor-pointer mb-3" onClick={copyReferral}>
                                 <div>
-                                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Your Code</div>
-                                    <div className="text-xl font-bold text-white tracking-widest font-mono">{referralCode || '--------'}</div>
+                                    <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Your Code</div>
+                                    <div className="text-lg font-bold text-white tracking-widest font-mono">{referralCode || '--------'}</div>
                                 </div>
                                 <button className="p-2 bg-blue-500/10 rounded-lg text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                                    {codeCopied ? <Check size={18} /> : <Copy size={18} />}
+                                    {codeCopied ? <Check size={16} /> : <Copy size={16} />}
                                 </button>
                             </div>
 
                             <div className="flex-1 overflow-y-auto">
-                                <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2 border-b border-white/5 pb-1">Recent Invites</div>
+                                <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-2 border-b border-white/5 pb-1">Recent Invites</div>
                                 <div className="space-y-2 text-xs">
-                                    <div className="text-center text-gray-600 italic py-4">No invites yet</div>
+                                    <div className="text-center text-gray-600 italic py-2 text-[10px]">No invites yet</div>
                                 </div>
                             </div>
                         </motion.div>
 
+                        {/* BURN VERIFICATION MODULE */}
+                        <ManualBurnVerification
+                            walletAddress={walletAddress}
+                            onRewardClaimed={onRewardClaimed}
+                        />
+
                         {/* ACHIEVEMENTS */}
-                        <motion.div variants={itemVariants} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-6 flex flex-col overflow-hidden">
-                            <div className="flex items-center gap-3 mb-4">
+                        <motion.div variants={itemVariants} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-5 flex flex-col overflow-hidden">
+                            <div className="flex items-center gap-3 mb-3">
                                 <div className="p-2 bg-yellow-500/10 rounded-lg">
-                                    <Trophy size={18} className="text-yellow-500" />
+                                    <Trophy size={16} className="text-yellow-500" />
                                 </div>
-                                <h3 className="text-white text-sm font-bold tracking-[0.2em] uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Achievements</h3>
+                                <h3 className="text-white text-xs font-bold tracking-[0.15em] uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Achievements</h3>
                             </div>
 
-                            <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                            <div className="flex-1 space-y-2 overflow-y-auto pr-1">
                                 {achievements.map((achievement) => (
-                                    <div key={achievement.id} className={`p-3 rounded-xl border flex items-center gap-3 transition-all hover:bg-white/5 ${achievement.unlocked ? 'bg-green-500/5 border-green-500/20' : 'bg-black/20 border-white/5 opacity-60'}`}>
-                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${achievement.unlocked ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-gray-500'}`}>
-                                            <achievement.icon size={18} />
+                                    <div key={achievement.id} className={`p-2 rounded-xl border flex items-center gap-2 transition-all hover:bg-white/5 ${achievement.unlocked ? 'bg-green-500/5 border-green-500/20' : 'bg-black/20 border-white/5 opacity-60'}`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${achievement.unlocked ? 'bg-green-500/20 text-green-500' : 'bg-white/5 text-gray-500'}`}>
+                                            <achievement.icon size={14} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-white font-bold uppercase text-[10px] tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{achievement.title}</h4>
-                                            <p className="text-gray-500 text-[9px] truncate">{achievement.description}</p>
+                                            <h4 className="text-white font-bold uppercase text-[9px] tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{achievement.title}</h4>
+                                            <p className="text-gray-500 text-[8px] truncate">{achievement.description}</p>
                                         </div>
-                                        {achievement.unlocked && <Check size={14} className="text-green-500 flex-shrink-0" />}
+                                        {achievement.unlocked && <Check size={12} className="text-green-500 flex-shrink-0" />}
                                     </div>
                                 ))}
                             </div>
@@ -271,6 +356,42 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                 </div>
             </motion.div>
+
+            {/* Burner Wallet Modal */}
+            <AnimatePresence>
+                {showBurnerWallet && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowBurnerWallet(false)}
+                    >
+                        {/* Backdrop */}
+                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+
+                        {/* Modal Content */}
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="relative z-10 w-full max-w-md"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setShowBurnerWallet(false)}
+                                className="absolute -top-2 -right-2 z-20 w-10 h-10 bg-black/80 border border-white/20 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-red-500/50 transition-all"
+                            >
+                                <X size={18} />
+                            </button>
+
+                            {/* Burner Wallet Dashboard */}
+                            <BurnerWalletDashboard />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

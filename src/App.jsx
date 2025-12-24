@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, PerspectiveCamera, useGLTF, Center, Grid, useTexture } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
@@ -16,10 +16,15 @@ import { useAudio } from './hooks/useAudio';
 import AudioControls from './components/AudioControls';
 import ProfilePage from './components/ProfilePage';
 import CarCallouts from './components/CarCallouts';
+import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
 
 
-// Preload the model
+// Preload the models
 useGLTF.preload('/bmw_m3_coupe_e30_1986.glb');
+useGLTF.preload('/1992_volkswagen_golf_gti_mk2.glb');
+useGLTF.preload('/1984_audi_sport_quattro.glb');
+useGLTF.preload('/1989_mazda_mx-5.glb');
+useGLTF.preload('/1987_ferrari_f40.glb');
 
 // Concrete Floor Component with texture (smooth fade like Grid)
 function ConcreteFloor() {
@@ -144,8 +149,8 @@ function IntroCamera() {
 
       // Simple LERP approach:
       // Note: This is a continuous lerp towards target, which creates an ease-out effect.
-      // Camera at Z=9.1 for 30% more zoom out
-      camera.position.lerp(vec.set(0, 1.5, 9.1), 0.05);
+      // Camera at Z=10.9 for 20% more zoom out from 9.1
+      camera.position.lerp(vec.set(0, 1.5, 10.9), 0.05);
       camera.lookAt(0, 0, 0);
     }
   });
@@ -239,27 +244,151 @@ function PendulumControls({ activePage }) {
   );
 }
 
-function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage }) {
-  const { scene } = useGLTF('/bmw_m3_coupe_e30_1986.glb');
+function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30' }) {
+  const { scene } = useGLTF(modelPath);
   const meshRef = useRef();
+  const transformGroupRef = useRef();
+  const prevIsOwned = useRef(isOwned);
 
   // Animation states
   const scaleRef = useRef(1);
+  const opacityRef = useRef(1);
   const targetXPosition = activePage === 'Paint Shop' ? 4.5 : 0;
+  // Track if this is the initial mount (no slide animation needed)
+  const isInitialMount = useRef(true);
+  // Initialize position: 0 on first load, slide from off-screen on model changes
   const currentXPosition = useRef(0);
+
+  // Set slide-in position only after first mount (for model switching)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      currentXPosition.current = targetXPosition; // Start at final position
+    } else {
+      // Model switch - start from off-screen
+      currentXPosition.current = transitionDirection === 1 ? 15 : -15;
+    }
+  }, [modelPath]);
+
+  const transitionScale = useRef(1);
+
+  // Robust Bounding Box Normalization - Scale matches models to TARGET_LENGTH
+  const TARGET_LENGTH = 10.5;
+
+  useLayoutEffect(() => {
+    if (!scene) return;
+
+    // Reset to identity for a clean measurement
+    scene.scale.setScalar(1);
+    scene.position.set(0, 0, 0);
+    scene.updateMatrixWorld();
+
+    // 1. Calculate bounding box of Meshes only (ignore lights/cameras)
+    const box = new THREE.Box3();
+    let hasMesh = false;
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        box.expandByObject(child);
+        hasMesh = true;
+      }
+    });
+
+    if (hasMesh) {
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+
+      // 2. Calculate scale factor based on model's length (X or Z axis)
+      const currentLength = Math.max(size.x, size.z);
+      let scale = TARGET_LENGTH / currentLength;
+
+      // Safety check for NaN/Infinity/0
+      if (!isFinite(scale) || scale <= 0) {
+        scale = 1;
+      }
+
+      // 3. Apply normalization and centering to the wrapper group
+      if (transformGroupRef.current) {
+        transformGroupRef.current.scale.setScalar(scale);
+        // Center X and Z
+        transformGroupRef.current.position.x = -center.x * scale;
+        transformGroupRef.current.position.z = -center.z * scale;
+        // Align Y so the bottom of the bounding box (tires) sits on the floor (y=-1)
+        const GROUND_Y = -1;
+        transformGroupRef.current.position.y = (-box.min.y * scale) + GROUND_Y;
+      }
+
+      // Reset scene transforms to identity so wrapper has full control
+      scene.scale.setScalar(1);
+      scene.position.set(0, 0, 0);
+
+      console.log(`[Fit-to-Target] ${modelPath} | Scale: ${scale.toFixed(3)} | Center: [${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}]`);
+    }
+  }, [scene, modelPath]);
 
 
   // Store original materials to revert after flash, and apply color/finish
   const originalMaterials = useRef({});
 
   // Function to apply color and finish to the main car body
-  const targetNames = ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'];
+  const defaultTargetNames = ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'];
+  const effectiveTargetNames = targetNames && targetNames.length > 0 ? targetNames : defaultTargetNames;
 
-  const applyCarStyle = useCallback((color, finish) => {
+  // Function to apply silhouette effect (black with slight edge highlighting)
+  const applySilhouette = useCallback(() => {
     if (!scene) return;
 
     scene.traverse((child) => {
-      if (child.isMesh && child.material && targetNames.includes(child.name)) {
+      if (child.isMesh && child.material) {
+        if (!child.userData.originalMaterial) {
+          child.userData.originalMaterial = child.material.clone();
+        }
+
+        // Apply visible silhouette material
+        const silhouetteMaterial = new THREE.MeshStandardMaterial({
+          color: 0x1a1a1a,      // Lighter grey
+          emissive: 0x111111,   // Slight self-illumination
+          roughness: 0.8,
+          metalness: 0.2,
+          transparent: true,
+          opacity: 0.95,        // More opaque
+        });
+        child.material = silhouetteMaterial;
+      }
+    });
+  }, [scene]);
+
+  // Function to restore original materials
+  const restoreOriginalMaterials = useCallback(() => {
+    if (!scene) return;
+
+    scene.traverse((child) => {
+      if (child.isMesh && child.userData.originalMaterial) {
+        child.material = child.userData.originalMaterial;
+        child.material.needsUpdate = true;
+      }
+    });
+  }, [scene]);
+
+  // Apply silhouette or restore based on ownership
+  useEffect(() => {
+    if (!isOwned) {
+      applySilhouette();
+    } else if (prevIsOwned.current === false && isOwned === true) {
+      // Just became owned - restore and flash
+      restoreOriginalMaterials();
+      scaleRef.current = 1.2; // Celebration bounce
+    }
+    prevIsOwned.current = isOwned;
+  }, [isOwned, applySilhouette, restoreOriginalMaterials]);
+
+  const applyCarStyle = useCallback((color, finish) => {
+    if (!scene || !isOwned) return; // Don't apply car style if not owned
+
+    scene.traverse((child) => {
+      // Use effectiveTargetNames instad of hardcoded targetNames
+      if (child.isMesh && child.material && effectiveTargetNames.includes(child.name)) {
         // Ensure material is not an array (MultiMaterial)
         const material = Array.isArray(child.material) ? child.material[0] : child.material;
 
@@ -289,7 +418,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
       }
     });
 
-  }, [scene]);
+  }, [scene, isOwned]);
 
   // Flash Effect logic - triggered by counter change
   useEffect(() => {
@@ -359,28 +488,53 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
 
 
+
+
   useFrame((state, delta) => {
     if (meshRef.current) {
       // Rotation
       meshRef.current.rotation.y += rotationSpeed;
 
-      // Smooth X position lerp for page transitions
-      currentXPosition.current += (targetXPosition - currentXPosition.current) * 0.08;
+      // Base X position for page transitions (Paint Shop offset)
+      const baseX = activePage === 'Paint Shop' ? 4.5 : 0;
+
+      // Slide transition on X-axis based on direction
+      // If Next (dir=1): Old exits Left (-15), New enters from Right (+15)
+      // If Prev (dir=-1): Old exits Right (+15), New enters from Left (-15)
+
+      let targetX = baseX;
+
+      if (isTransitioning) {
+        // Exiting
+        targetX = baseX + (transitionDirection === 1 ? -15 : 15);
+      } else {
+        // Entering (Target is baseX)
+        targetX = baseX;
+      }
+
+      currentXPosition.current = THREE.MathUtils.lerp(currentXPosition.current, targetX, delta * 6);
       meshRef.current.position.x = currentXPosition.current;
 
-      // Bounce/Scale Animation
-      if (scaleRef.current > 1) {
+      // Bounce/Scale Animation (no shrink during slide)
+      if (scaleRef.current > 1 && !isTransitioning) {
         scaleRef.current = THREE.MathUtils.lerp(scaleRef.current, 1, delta * 5);
         meshRef.current.scale.setScalar(scaleRef.current);
       }
+
+      // Keep Y position stable
+      meshRef.current.position.y = 0;
     }
   });
 
   return (
-    <group ref={meshRef} position={[0, -1.03, 0]}>
-      <Center top>
+    <group ref={meshRef}>
+      <group ref={transformGroupRef}>
         <primitive object={scene} />
-      </Center>
+        {/* Part Callouts - Now relative to car dimensions */}
+        {activePage === 'Garage' && (
+          <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} carModelId={carModelId} />
+        )}
+      </group>
     </group>
   );
 }
@@ -392,6 +546,51 @@ function App() {
   const [sceneBackground, setSceneBackground] = useState('grid'); // Default floor type
   const [rotationSpeed, setRotationSpeed] = useState(0.00);
   const [earningRate, setEarningRate] = useState(0.00001);
+
+  // Car model selection
+  const [currentCarModelIndex, setCurrentCarModelIndex] = useState(0);
+  const [isModelTransitioning, setIsModelTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState(1); // 1 = Next, -1 = Prev
+  const [ownedCars, setOwnedCars] = useState(['bmw_m3_e30']); // Array of owned car IDs
+
+  // Get current car model info
+  const currentCarModel = CAR_MODELS[currentCarModelIndex] || CAR_MODELS[0];
+  const isCurrentCarOwned = ownedCars.includes(currentCarModel.id);
+
+  // Handle car model change with animation
+  const handleCarModelChange = (newIndex, modelInfo, direction = 1) => {
+    if (isModelTransitioning) return;
+    setTransitionDirection(direction);
+    setIsModelTransitioning(true);
+    // After a short delay to allow exit animation
+    setTimeout(() => {
+      setCurrentCarModelIndex(newIndex);
+      // Immediately turn off transitioning flag for the new component
+      // The new component mounts with x=-15 and slides to 0 because isModelTransitioning is false
+      setIsModelTransitioning(false);
+    }, 300);
+  };
+
+  // Handle car purchase (burn tokens to unlock)
+  const handleCarPurchase = (carId, price) => {
+    if (demoMode) {
+      setOwnedCars(prev => {
+        if (!prev.includes(carId)) {
+          return [...prev, carId];
+        }
+        return prev;
+      });
+      alert(`[DEMO MODE] Car ${carId} unlocked instantly!`);
+      return;
+    }
+
+    // TODO: Integrate with actual token burn verification
+    // For now, show alert - you'll replace this with burn flow
+    alert(`Purchase ${carId} by burning ${price} tokens.\n\nThis will be connected to the burn verification system.`);
+
+    // Uncomment below to test unlock functionality:
+    // setOwnedCars(prev => [...prev, carId]);
+  };
 
   // Auth
   const { user, authenticated } = usePrivy();
@@ -438,13 +637,32 @@ function App() {
   const [inventory, setInventory] = useState([]);
 
   // Equipped Parts State
-  const [equippedParts, setEquippedParts] = useState({
+  // Equipped Parts Map State (carId -> parts object)
+  const [equippedPartsByCar, setEquippedPartsByCar] = useState({
+    'bmw_m3_e30': {
+      Engines: null,
+      Turbos: null,
+      Suspensions: null,
+      Wheels: null,
+      Special: null,
+    },
+    'vw_golf_gti_mk2': {
+      Engines: null,
+      Turbos: null,
+      Suspensions: null,
+      Wheels: null,
+      Special: null,
+    }
+  });
+
+  // Derived state for current car's equipped parts
+  const equippedParts = equippedPartsByCar[currentCarModel.id] || {
     Engines: null,
     Turbos: null,
     Suspensions: null,
     Wheels: null,
     Special: null,
-  });
+  };
 
   // Flash Effect State - Use counter to trigger unique flashes
   const [flashTrigger, setFlashTrigger] = useState(0);
@@ -453,19 +671,64 @@ function App() {
   const [referralCode, setReferralCode] = useState('');
 
   // Function to equip an item (triggered by drag & drop)
+  // Enforces "Unique Item" rule: Item can only be on one car at a time
   const equipItem = (item) => {
     if (!item || !item.category) return;
+    const currentCarId = currentCarModel.id;
 
-    setEquippedParts(prev => ({
-      ...prev,
-      [item.category]: item
-    }));
+    setEquippedPartsByCar(prev => {
+      const newState = { ...prev };
+
+      // 1. Check if item is equipped on ANY other car and remove it
+      Object.keys(newState).forEach(carId => {
+        const carParts = { ...newState[carId] };
+        let changed = false;
+
+        if (carParts[item.category]?.id === item.id) {
+          // If this exact item is equipped elsewhere (or here), remove/replace it
+          // Actually, if it's already here, we are just re-equipping (fine)
+          // If it's elsewhere, we remove it from there (move to current)
+          if (carId !== currentCarId) {
+            carParts[item.category] = null;
+            changed = true;
+          }
+        }
+
+        if (changed) newState[carId] = carParts;
+      });
+
+      // 2. Equip on current car
+      newState[currentCarId] = {
+        ...(newState[currentCarId] || {}),
+        [item.category]: item
+      };
+
+      return newState;
+    });
 
     // Trigger flash effect by incrementing counter
     setFlashTrigger(prev => prev + 1);
 
     // Play category-specific equip sound
     playEquip(item.category);
+  };
+
+  // Function to UNEQUIP an item from the current car
+  const unequipItem = (item) => {
+    if (!item || !item.category) return;
+    const currentCarId = currentCarModel.id;
+
+    setEquippedPartsByCar(prev => {
+      const newState = { ...prev };
+      const carParts = { ...(newState[currentCarId] || {}) };
+
+      // Only unequip if it holds this specific item (or just clear the category)
+      if (carParts[item.category]?.id === item.id) {
+        carParts[item.category] = null;
+        newState[currentCarId] = carParts;
+      }
+      return newState;
+    });
   };
 
   // Function to add item to inventory
@@ -534,12 +797,17 @@ function App() {
         console.log('🔧 Loading DEMO data...');
         setCarColor('#00FF00'); // Green car for demo
         setInventory(DEMO_INVENTORY);
-        setEquippedParts({
-          Engines: DEMO_INVENTORY[0],
-          Turbos: DEMO_INVENTORY[1],
-          Wheels: DEMO_INVENTORY[2],
-          Suspensions: DEMO_INVENTORY[3],
-          Special: DEMO_INVENTORY[4],
+        setEquippedPartsByCar({
+          'bmw_m3_e30': {
+            Engines: DEMO_INVENTORY[0],
+            Turbos: DEMO_INVENTORY[1],
+            Wheels: DEMO_INVENTORY[2],
+            Suspensions: DEMO_INVENTORY[3],
+            Special: DEMO_INVENTORY[4],
+          },
+          'vw_golf_gti_mk2': {
+            Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null
+          }
         });
         setEarnings(999999);
         setReferralCode('DEMO1234');
@@ -555,9 +823,22 @@ function App() {
           console.log('Data loaded:', data);
           setCarColor(data.car_color || '#FF0000');
           setInventory(data.inventory || []);
-          setEquippedParts(data.equipped_parts || {
-            Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null
-          });
+
+          // Handle migration from old single-car format to new multi-car format
+          const loadedParts = data.equipped_parts || {};
+          if (loadedParts.Engines || loadedParts.Turbos || loadedParts.Wheels) {
+            // Legacy format detected
+            setEquippedPartsByCar({
+              'bmw_m3_e30': loadedParts,
+              'vw_golf_gti_mk2': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }
+            });
+          } else {
+            // New format or empty
+            setEquippedPartsByCar(loadedParts.bmw_m3_e30 ? loadedParts : {
+              'bmw_m3_e30': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null },
+              'vw_golf_gti_mk2': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }
+            });
+          }
           setEarnings(Number(data.cash) || 50000);
           setReferralCode(data.referral_code || '');
         }
@@ -585,12 +866,12 @@ function App() {
       saveUserData(user.wallet.address, {
         carColor,
         inventory,
-        equippedParts,
+        equipped_parts: equippedPartsByCar,
         cash: earnings,
         netWorth: currentNetWorth
       });
     }
-  }, [carColor, inventory, equippedParts, earnings, authenticated, user?.wallet?.address, demoMode]);
+  }, [carColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode]);
 
 
   const handleConnectWallet = () => {
@@ -650,6 +931,17 @@ function App() {
         </div>
       )}
 
+      {/* Car Model Selector - Garage only */}
+      {activePage === 'Garage' && (
+        <CarModelSelector
+          currentModelIndex={currentCarModelIndex}
+          onModelChange={handleCarModelChange}
+          isTransitioning={isModelTransitioning}
+          ownedCars={ownedCars}
+          onPurchase={handleCarPurchase}
+        />
+      )}
+
       {/* 3D Scene Layer - Visible in Garage and Paint Shop */}
       {(activePage === 'Garage' || activePage === 'Paint Shop') && (
         <div
@@ -679,17 +971,22 @@ function App() {
 
             {/* Car Model */}
             <CarModel
+              key={currentCarModel.id}
               rotationSpeed={rotationSpeed}
               triggerFlash={flashTrigger}
               carColor={carColor}
               carFinish={carFinish}
               activePage={activePage}
+              isTransitioning={isModelTransitioning}
+              modelPath={currentCarModel.model}
+              isOwned={isCurrentCarOwned}
+              targetNames={currentCarModel.targetNames}
+              autoScale={currentCarModel.autoScale}
+              transitionDirection={transitionDirection}
+              equippedParts={equippedParts}
+              inventory={inventory}
+              carModelId={currentCarModel.id}
             />
-
-            {/* Part Callouts - Only in Garage view */}
-            {activePage === 'Garage' && (
-              <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} />
-            )}
 
             {/* Floor - switches based on sceneBackground */}
             {sceneBackground === 'grid' && (
@@ -809,6 +1106,7 @@ function App() {
           inventory={inventory}
           equippedParts={equippedParts}
           equipItem={equipItem}
+          unequipItem={unequipItem}
           setDraggedItem={setDraggedItem}
           draggedItem={draggedItem}
         />
