@@ -4,8 +4,8 @@ import { PublicKey, Transaction } from '@solana/web3.js';
 import { createBurnCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
 
 // Replace with your actual Devnet Mint Address
-// TODO: User to provide// Devnet Token Mint Address (Test Tokens)
-const MINT_ADDRESS = '2gD5pj1ztVAUCa7TAhxrZAV4CEaRRfxANGri1JuthwCk';
+// TODO: User to provide actual mint address
+const MINT_ADDRESS = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
 const REQUIRED_DECIMALS = 9; // Devnet Token usually 9
 
 export function useBurnUnlock() {
@@ -70,8 +70,8 @@ export function useBurnUnlock() {
                 },
                 body: JSON.stringify({
                     signature,
-                    userWallet: publicKey.toString(),
-                    amountToBurn: carPrice
+                    walletAddress: publicKey.toString(),
+                    requiredAmount: carPrice
                 }),
             });
 

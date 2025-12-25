@@ -201,28 +201,7 @@ const CarModelSelector = ({
                                     style={{ fontFamily: 'Rajdhani, sans-serif' }}
                                 >
                                     {isBurning ? <Loader2 size={18} className="animate-spin" /> : <Flame size={18} />}
-                                    {isBurning ? 'Verifying Burn...' : `Burn ${currentModel.price} to Unlock`}
-                                </motion.button>
-                            )}
-
-                            {/* Select Car Button - Only for owned cars */}
-                            {isOwned && (
-                                <motion.button
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="mt-6 px-6 py-3 
-                                             bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500
-                                             text-white font-bold uppercase tracking-wider text-sm rounded-xl
-                                             border border-green-500/30 shadow-[0_0_20px_rgba(34,197,94,0.3)]
-                                             hover:shadow-[0_0_30px_rgba(34,197,94,0.5)] transition-all duration-300
-                                             flex items-center justify-center gap-2 mx-auto"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    style={{ fontFamily: 'Rajdhani, sans-serif' }}
-                                >
-                                    <Check size={18} />
-                                    Select Car
+                                    {isBurning ? 'Burning...' : 'Burn to Unlock'}
                                 </motion.button>
                             )}
                         </motion.div>
