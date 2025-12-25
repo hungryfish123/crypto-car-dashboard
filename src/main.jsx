@@ -2,13 +2,24 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { PrivyProvider } from '@privy-io/react-auth'
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana'
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import '@solana/wallet-adapter-react-ui/styles.css';
+
 import './index.css'
 import App from './App.jsx'
 
-// Solana wallet connectors for Phantom, Solflare, etc.
+// Solana wallet connectors
 const solanaConnectors = toSolanaWalletConnectors({
   shouldAutoConnect: true,
 });
+
+// Wallets for Adapter
+const wallets = [
+  new PhantomWalletAdapter(),
+  new SolflareWalletAdapter()
+];
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -27,7 +38,6 @@ createRoot(document.getElementById('root')).render(
         embeddedWallets: {
           createOnLogin: 'off',
         },
-        // Enable Solana wallet detection (Phantom, Solflare, etc.)
         externalWallets: {
           solana: {
             connectors: solanaConnectors,
@@ -35,8 +45,13 @@ createRoot(document.getElementById('root')).render(
         },
       }}
     >
-      <App />
+      <ConnectionProvider endpoint="https://api.devnet.solana.com">
+        <WalletProvider wallets={wallets} autoConnect>
+          <WalletModalProvider>
+            <App />
+          </WalletModalProvider>
+        </WalletProvider>
+      </ConnectionProvider>
     </PrivyProvider>
   </StrictMode>,
 )
-

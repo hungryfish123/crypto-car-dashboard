@@ -659,7 +659,7 @@ function App() {
     }, 300);
   };
 
-  // Handle car purchase (burn tokens to unlock)
+  // Handle car purchase (State update only - actual burn is in CarModelSelector)
   const handleCarPurchase = (carId, price) => {
     if (demoMode) {
       setOwnedCars(prev => {
@@ -672,13 +672,14 @@ function App() {
       return;
     }
 
-    // For now, simulate successful burn to trigger animation
+    // Standard unlock (called after successful burn)
     setOwnedCars(prev => {
       if (!prev.includes(carId)) {
         return [...prev, carId];
       }
       return prev;
     });
+    playSuccess();
   };
 
   // Auth

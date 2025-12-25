@@ -2,14 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
-const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
+const AccessGate = ({ onUnlock, correctCode = ["SUSKO", "MAURO"] }) => {
     const [inputCode, setInputCode] = useState('');
     const [error, setError] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (inputCode === correctCode) {
+        const normalizedInput = inputCode.toUpperCase().trim();
+        const isCorrect = Array.isArray(correctCode)
+            ? correctCode.includes(normalizedInput)
+            : normalizedInput === correctCode;
+
+        if (isCorrect) {
             setIsUnlocked(true);
             // Wait for exit animation
             setTimeout(() => {
