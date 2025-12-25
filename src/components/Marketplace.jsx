@@ -461,7 +461,7 @@ const Marketplace = ({ addToInventory }) => {
                                         onChange={(e) => setMaxPrice(parseInt(e.target.value))}
                                         className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-red-600"
                                     />
-                                    <div className="flex justify-between text-[9px] text-gray-600 mt-2 font-mono">
+                                    <div className="flex justify-between text-[10px] text-gray-600 mt-2 font-mono">
                                         <span>500</span>
                                         <span>70k</span>
                                     </div>

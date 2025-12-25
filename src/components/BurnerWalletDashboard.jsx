@@ -254,8 +254,8 @@ const BurnerWalletDashboard = ({ rpcUrl }) => {
                     <button
                         onClick={handleReset}
                         className={`w-full py-2 px-4 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${confirmReset
-                                ? 'bg-red-600 text-white animate-pulse'
-                                : 'bg-transparent border border-red-500/30 text-red-400/60 hover:text-red-400 hover:border-red-500/50'
+                            ? 'bg-red-600 text-white animate-pulse'
+                            : 'bg-transparent border border-red-500/30 text-red-400/60 hover:text-red-400 hover:border-red-500/50'
                             }`}
                     >
                         <Trash2 size={12} />

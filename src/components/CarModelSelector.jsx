@@ -25,6 +25,11 @@ const CAR_MODELS = [
         model: '/1992_volkswagen_golf_gti_mk2.glb',
         price: 1000, // Token amount to burn
         defaultOwned: false,
+        targetNames: [
+            'car_volkswagen_golfgtimk2_1992_Mesh:M_Paint_Metal_High_carpaint_0',
+            'car_volkswagen_golfgtimk2_1992_Mesh_M_Paint_Metal_High_carpaint_0', // Colon -> Underscore
+            'car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'   // Colon removed
+        ],
         autoScale: false
     },
     {
@@ -34,6 +39,7 @@ const CAR_MODELS = [
         model: '/1984_audi_sport_quattro.glb',
         price: 2500,
         defaultOwned: false,
+        targetNames: ['Object_8', 'Object_11', 'Object_110', 'Object_128', 'Object_539'],
         autoScale: false
     },
     {

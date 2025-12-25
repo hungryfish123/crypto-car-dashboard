@@ -269,7 +269,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                             <div className="bg-white/5 border border-white/10 rounded-xl p-3 flex items-center justify-between group hover:border-blue-500/30 transition-colors cursor-pointer mb-3" onClick={copyReferral}>
                                 <div>
-                                    <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-1">Your Code</div>
+                                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Your Code</div>
                                     <div className="text-lg font-bold text-white tracking-widest font-mono">{referralCode || '--------'}</div>
                                 </div>
                                 <button className="p-2 bg-blue-500/10 rounded-lg text-blue-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
@@ -278,7 +278,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </div>
 
                             <div className="flex-1 overflow-y-auto">
-                                <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mb-2 border-b border-white/5 pb-1">Recent Invites</div>
+                                <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2 border-b border-white/5 pb-1">Recent Invites</div>
                                 <div className="space-y-2 text-xs">
                                     <div className="text-center text-gray-600 italic py-2 text-[10px]">No invites yet</div>
                                 </div>
@@ -307,8 +307,8 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                                             <achievement.icon size={14} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h4 className="text-white font-bold uppercase text-[9px] tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{achievement.title}</h4>
-                                            <p className="text-gray-500 text-[8px] truncate">{achievement.description}</p>
+                                            <h4 className="text-white font-bold uppercase text-[10px] tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{achievement.title}</h4>
+                                            <p className="text-gray-500 text-[10px] truncate">{achievement.description}</p>
                                         </div>
                                         {achievement.unlocked && <Check size={12} className="text-green-500 flex-shrink-0" />}
                                     </div>

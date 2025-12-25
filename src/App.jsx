@@ -17,6 +17,7 @@ import AudioControls from './components/AudioControls';
 import ProfilePage from './components/ProfilePage';
 import CarCallouts from './components/CarCallouts';
 import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
+import AccessGate from './components/AccessGate';
 
 
 // Preload the models
@@ -149,8 +150,8 @@ function IntroCamera() {
 
       // Simple LERP approach:
       // Note: This is a continuous lerp towards target, which creates an ease-out effect.
-      // Camera at Z=10.9 for 20% more zoom out from 9.1
-      camera.position.lerp(vec.set(0, 1.5, 10.9), 0.05);
+      // Camera at Z=12.5 for a wider default view
+      camera.position.lerp(vec.set(0, 1.5, 12.5), 0.05);
       camera.lookAt(0, 0, 0);
     }
   });
@@ -238,7 +239,7 @@ function PendulumControls({ activePage }) {
       minPolarAngle={Math.PI / 3}
       maxPolarAngle={Math.PI / 2.2}
       minDistance={5.2}
-      maxDistance={13}
+      maxDistance={15}
       enablePan={false}
     />
   );
@@ -249,6 +250,9 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
   const meshRef = useRef();
   const transformGroupRef = useRef();
   const prevIsOwned = useRef(isOwned);
+  const revealState = useRef('idle'); // 'idle', 'heating', 'cooling'
+  const glowIntensity = useRef(0);
+
 
   // Animation states
   const scaleRef = useRef(1);
@@ -372,40 +376,55 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
   }, [scene]);
 
   // Apply silhouette or restore based on ownership
+  // Apply silhouette or restore based on ownership
   useEffect(() => {
     if (!isOwned) {
       applySilhouette();
+      revealState.current = 'idle';
     } else if (prevIsOwned.current === false && isOwned === true) {
-      // Just became owned - restore and flash
-      restoreOriginalMaterials();
-      scaleRef.current = 1.2; // Celebration bounce
+      // Start Burn Reveal Animation
+      revealState.current = 'heating';
+      glowIntensity.current = 0;
     }
     prevIsOwned.current = isOwned;
   }, [isOwned, applySilhouette, restoreOriginalMaterials]);
 
+
   const applyCarStyle = useCallback((color, finish) => {
     if (!scene || !isOwned) return; // Don't apply car style if not owned
 
+    // DEBUG: Log all mesh names to help find the correct target
+    console.log('--- Apply Car Style Debug ---');
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        console.log('Mesh Name:', child.name);
+      }
+    });
+
     scene.traverse((child) => {
       // Use effectiveTargetNames instad of hardcoded targetNames
-      if (child.isMesh && child.material && effectiveTargetNames.includes(child.name)) {
-        // Ensure material is not an array (MultiMaterial)
-        const material = Array.isArray(child.material) ? child.material[0] : child.material;
+      if (child.isMesh && child.material) {
+        // Strict match check
+        if (effectiveTargetNames.includes(child.name)) {
+          // console.log('Applying color to:', child.name);
+          // Ensure material is not an array (MultiMaterial)
+          const material = Array.isArray(child.material) ? child.material[0] : child.material;
 
-        if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-          material.color.set(color);
+          if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
+            material.color.set(color);
 
-          if (finish === 'glossy') {
-            material.metalness = 0.1;
-            material.roughness = 0.2;
-          } else if (finish === 'matte') {
-            material.metalness = 0.0;
-            material.roughness = 0.8;
-          } else if (finish === 'metallic') {
-            material.metalness = 0.9;
-            material.roughness = 0.3;
+            if (finish === 'glossy') {
+              material.metalness = 0.1;
+              material.roughness = 0.2;
+            } else if (finish === 'matte') {
+              material.metalness = 0.0;
+              material.roughness = 0.8;
+            } else if (finish === 'metallic') {
+              material.metalness = 0.9;
+              material.roughness = 0.3;
+            }
+            material.needsUpdate = true;
           }
-          material.needsUpdate = true;
         }
       }
     });
@@ -418,11 +437,13 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
       }
     });
 
-  }, [scene, isOwned]);
+  }, [scene, isOwned, effectiveTargetNames]);
 
   // Flash Effect logic - triggered by counter change
+  // Flash Effect logic - triggered by counter change (Standard flash)
   useEffect(() => {
-    if (triggerFlash > 0 && scene) {
+    // Only flash if we are NOT in the middle of a reveal animation
+    if (triggerFlash > 0 && scene && revealState.current === 'idle') {
       scaleRef.current = 1.1; // Bounce animation
 
       // 1. FLASH ON: Set all materials to white glow
@@ -523,6 +544,68 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
       // Keep Y position stable
       meshRef.current.position.y = 0;
+
+      // Handle Burn Reveal Animation
+      if (revealState.current === 'heating') {
+        const speed = 2.0;
+        glowIntensity.current = THREE.MathUtils.lerp(glowIntensity.current, 8.0, delta * speed); // Heat up to 8.0 intensity
+
+        // Apply heat to silhouette
+        scene.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.emissive.setHex(0xffffff);
+            child.material.emissiveIntensity = glowIntensity.current;
+            // Also make it fully opaque
+            if (child.material.opacity) child.material.opacity = 1;
+          }
+        });
+
+        // Trigger switch when hot enough (close to 8.0)
+        if (glowIntensity.current > 7.0) {
+          revealState.current = 'cooling';
+          restoreOriginalMaterials();
+          applyCarStyle(carColor, carFinish); // Ensure correct color is applied to restored mats
+
+          // Set initial glow for cooling phase (start hot)
+          glowIntensity.current = 5.0;
+
+          // FORCE overwrite emissive immediately to prevent 1-frame dark flicker
+          scene.traverse(child => {
+            if (child.isMesh && child.material) {
+              child.material.emissive.setHex(0xffffff);
+              child.material.emissiveIntensity = glowIntensity.current;
+            }
+          });
+
+          scaleRef.current = 1.15; // Bounce effect
+        }
+
+      } else if (revealState.current === 'cooling') {
+        const coolSpeed = 1.0;
+        glowIntensity.current = THREE.MathUtils.lerp(glowIntensity.current, 0, delta * coolSpeed);
+
+        // Apply glow to restored materials
+        scene.traverse(child => {
+          if (child.isMesh && child.material) {
+            child.material.emissive.setHex(0xffffff);
+            child.material.emissiveIntensity = glowIntensity.current;
+          }
+        });
+
+        // End animation
+        if (glowIntensity.current < 0.05) {
+          revealState.current = 'idle';
+          glowIntensity.current = 0;
+          // Final cleanup to ensure no lingering glow
+          scene.traverse(child => {
+            if (child.isMesh && child.material) {
+              child.material.emissiveIntensity = 0;
+              child.material.emissive.setHex(0x000000);
+            }
+          });
+        }
+      }
+
     }
   });
 
@@ -557,6 +640,11 @@ function App() {
   const currentCarModel = CAR_MODELS[currentCarModelIndex] || CAR_MODELS[0];
   const isCurrentCarOwned = ownedCars.includes(currentCarModel.id);
 
+  // Access Gate State
+  const [hasAccess, setHasAccess] = useState(false);
+
+
+
   // Handle car model change with animation
   const handleCarModelChange = (newIndex, modelInfo, direction = 1) => {
     if (isModelTransitioning) return;
@@ -584,12 +672,13 @@ function App() {
       return;
     }
 
-    // TODO: Integrate with actual token burn verification
-    // For now, show alert - you'll replace this with burn flow
-    alert(`Purchase ${carId} by burning ${price} tokens.\n\nThis will be connected to the burn verification system.`);
-
-    // Uncomment below to test unlock functionality:
-    // setOwnedCars(prev => [...prev, carId]);
+    // For now, simulate successful burn to trigger animation
+    setOwnedCars(prev => {
+      if (!prev.includes(carId)) {
+        return [...prev, carId];
+      }
+      return prev;
+    });
   };
 
   // Auth
@@ -915,6 +1004,10 @@ function App() {
       alert("Connect Wallet first!");
     }
   };
+
+  if (!hasAccess) {
+    return <AccessGate onUnlock={() => setHasAccess(true)} />;
+  }
 
   return (
     <div

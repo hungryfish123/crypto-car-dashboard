@@ -99,7 +99,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                             className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 hover:scale-105 group ${isBeingDragged ? 'opacity-40 border-dashed scale-95 grayscale' : ''} ${isEquipped ? 'cursor-default ring-1 ring-red-500/50' : ''}`}>
 
                                             {/* Rarity Label (Top Right) */}
-                                            <div className={`absolute top-2 right-2 px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
+                                            <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
 
                                             {/* Minimal Remove Icon (Top Left) - Only if equipped */}
                                             {isEquipped && (
