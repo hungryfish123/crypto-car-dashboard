@@ -1,7 +1,8 @@
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 
 // Configuration
 const SOLANA_RPC_URL = 'https://api.devnet.solana.com';
+const EXPECTED_MINT = '2gD5pj1ztVAUCa7TAhxrZAV4CEaRRfxANGri1JuthwCk';
 
 export default async function handler(req, res) {
     // 1. Method check
@@ -9,80 +10,71 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { signature, walletAddress, requiredAmount } = req.body;
+    const { signature, userWallet, amountToBurn } = req.body;
 
     // 2. Input validation
-    if (!signature || !walletAddress || !requiredAmount) {
-        return res.status(400).json({ error: 'Missing required parameters' });
+    if (!signature || !userWallet || amountToBurn === undefined) {
+        return res.status(400).json({ error: 'Missing required parameters: signature, userWallet, amountToBurn' });
     }
 
     try {
         const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
-        // 3. Fetch Transaction
+        // 3. Fetch Parsed Transaction
         const transaction = await connection.getParsedTransaction(signature, {
             maxSupportedTransactionVersion: 0,
         });
 
         if (!transaction) {
-            return res.status(404).json({ error: 'Transaction not found' });
+            return res.status(400).json({ error: 'Transaction not found' });
         }
 
         if (transaction.meta?.err) {
-            return res.status(400).json({ error: 'Transaction failed on-chain' });
+            return res.status(400).json({ error: 'Transaction failed on-chain', details: transaction.meta.err });
         }
 
-        // 4. Calculate Balance Change
-        // We look for the change in token balance for the user's wallet
-        // Note: This logic assumes we are checking for a *decrease* in balance (Burn)
+        const preBalances = transaction.meta?.preTokenBalances || [];
+        const postBalances = transaction.meta?.postTokenBalances || [];
 
-        // Helper to find balance for a specific owner in a list of token balances
-        const findBalance = (balances, owner) => {
-            const found = balances.find(b => b.owner === owner);
-            return found ? found.uiTokenAmount.uiAmount : 0;
+        // 4. Find the user's balance change for the specific mint
+        const findBalance = (balances, owner, mint) => {
+            const found = balances.find(b => b.owner === owner && b.mint === mint);
+            // Use raw amount (string) for precision, convert to number for comparison
+            return found ? parseFloat(found.uiTokenAmount.uiAmountString || '0') : 0;
         };
 
-        const preBalance = findBalance(transaction.meta.preTokenBalances, walletAddress);
-        const postBalance = findBalance(transaction.meta.postTokenBalances, walletAddress);
+        const preBalance = findBalance(preBalances, userWallet, EXPECTED_MINT);
+        const postBalance = findBalance(postBalances, userWallet, EXPECTED_MINT);
 
-        // Calculate how much was burned/spent
-        // If it's a burn, pre should be > post
-        const amountChanged = preBalance - postBalance;
+        // Calculate how much was burned (pre - post)
+        const burnedAmount = preBalance - postBalance;
 
-        // Floating point precision handling (simple version)
-        // In production, consider using BigInt for raw amounts, but uiAmount is usually sufficient for simple checks
-        const amountBurned = Math.max(0, amountChanged);
+        console.log(`[Verify] Wallet: ${userWallet}`);
+        console.log(`[Verify] Mint: ${EXPECTED_MINT}`);
+        console.log(`[Verify] Pre: ${preBalance}, Post: ${postBalance}, Burned: ${burnedAmount}`);
+        console.log(`[Verify] Required: ${amountToBurn}`);
 
-        console.log(`Wallet: ${walletAddress}`);
-        console.log(`Pre: ${preBalance}, Post: ${postBalance}, Diff: ${amountBurned}`);
-        console.log(`Required: ${requiredAmount}`);
-
-        // 5. Verification
-        if (amountBurned < requiredAmount) {
+        // 5. Verification - Exact match required
+        if (burnedAmount !== amountToBurn) {
             return res.status(400).json({
                 success: false,
-                error: `Insufficient burn amount. Burned: ${amountBurned}, Required: ${requiredAmount}`
+                error: `Burn amount mismatch. Burned: ${burnedAmount}, Required: ${amountToBurn}`
             });
         }
 
-        // 6. Database Update (Mocked)
-        // TODO: Connect to database and unlock the car for this user
-        // await db.users.update({ where: { wallet: walletAddress }, data: { unlockedCars: { push: 'CAR_ID' } } });
-        console.log(`[MOCK DB] Unlocking car for ${walletAddress} after valid burn of ${amountBurned}`);
-
-        // 7. Success Response
+        // 6. Success Response
         return res.status(200).json({
             success: true,
-            message: 'Burn verified and unlock authorized',
+            message: 'Burn verified successfully',
             data: {
                 signature,
-                walletAddress,
-                amountBurned
+                userWallet,
+                burnedAmount
             }
         });
 
     } catch (error) {
         console.error('Verify API Error:', error);
-        return res.status(500).json({ error: 'Internal server verification failed', details: error.message });
+        return res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 }
