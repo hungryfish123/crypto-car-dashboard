@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
-const AccessGate = ({ onUnlock, correctCode = ["SUSKO", "MAURO"] }) => {
+const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
     const [inputCode, setInputCode] = useState('');
     const [error, setError] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
