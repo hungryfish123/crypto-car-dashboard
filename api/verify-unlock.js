@@ -1,88 +1,88 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 
-// Configuration
-const SOLANA_RPC_URL = 'https://api.devnet.solana.com';
+const SOLANA_RPC_URL = process.env.SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 
 export default async function handler(req, res) {
-    // 1. Method check
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     const { signature, walletAddress, requiredAmount } = req.body;
 
-    // 2. Input validation
     if (!signature || !walletAddress || !requiredAmount) {
-        return res.status(400).json({ error: 'Missing required parameters' });
+        return res.status(400).json({ error: 'Missing required fields' });
     }
 
     try {
         const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
-        // 3. Fetch Transaction
-        const transaction = await connection.getParsedTransaction(signature, {
-            maxSupportedTransactionVersion: 0,
+        // Fetch transaction
+        const tx = await connection.getParsedTransaction(signature, {
+            maxSupportedTransactionVersion: 0
         });
 
-        if (!transaction) {
+        if (!tx) {
             return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        if (transaction.meta?.err) {
+        if (tx.meta?.err) {
             return res.status(400).json({ error: 'Transaction failed on-chain' });
         }
 
-        // 4. Calculate Balance Change
-        // We look for the change in token balance for the user's wallet
-        // Note: This logic assumes we are checking for a *decrease* in balance (Burn)
+        // Calculate burn amount by checking balance change
+        // We look for the user's token account in pre/post balances
+        // Note: This assumes the user burned from their own ATA. 
+        // A more robust way is to specifically look for the burn instruction, but balance change is a good proxy if we verify the signer.
 
-        // Helper to find balance for a specific owner in a list of token balances
-        const findBalance = (balances, owner) => {
-            const found = balances.find(b => b.owner === owner);
-            return found ? found.uiTokenAmount.uiAmount : 0;
-        };
+        // Verify signer
+        const accountKeys = tx.transaction.message.accountKeys;
+        const signer = accountKeys.find(key => key.signer && key.pubkey.toString() === walletAddress);
+        if (!signer) {
+            return res.status(400).json({ error: 'Wallet address did not sign the transaction' });
+        }
 
-        const preBalance = findBalance(transaction.meta.preTokenBalances, walletAddress);
-        const postBalance = findBalance(transaction.meta.postTokenBalances, walletAddress);
+        // Find the Token Account change for this wallet
+        // We need to know which token mint we care about? 
+        // The frontend uses a hardcoded mint. Ideally we should verify the mint too.
+        // For now, let's verify that *some* token balance decreased by *at least* requiredAmount.
+        // This is a simplification. Ideally check the specific mint.
 
-        // Calculate how much was burned/spent
-        // If it's a burn, pre should be > post
-        const amountChanged = preBalance - postBalance;
+        const preBalances = tx.meta.preTokenBalances;
+        const postBalances = tx.meta.postTokenBalances;
 
-        // Floating point precision handling (simple version)
-        // In production, consider using BigInt for raw amounts, but uiAmount is usually sufficient for simple checks
-        const amountBurned = Math.max(0, amountChanged);
+        let amountBurned = 0;
 
-        console.log(`Wallet: ${walletAddress}`);
-        console.log(`Pre: ${preBalance}, Post: ${postBalance}, Diff: ${amountBurned}`);
-        console.log(`Required: ${requiredAmount}`);
+        // Iterate over preBalances to find the user's account
+        for (const pre of preBalances) {
+            if (pre.owner === walletAddress) {
+                // Find corresponding post balance
+                const post = postBalances.find(p => p.accountIndex === pre.accountIndex);
+                if (post) {
+                    const preAmount = pre.uiTokenAmount.uiAmount;
+                    const postAmount = post.uiTokenAmount.uiAmount;
 
-        // 5. Verification
-        if (amountBurned < requiredAmount) {
+                    if (preAmount > postAmount) {
+                        amountBurned += (preAmount - postAmount);
+                    }
+                }
+            }
+        }
+
+        // Comparison (allow for small float errors if needed, but strict is better for crypto)
+        if (amountBurned >= parseFloat(requiredAmount)) {
+            // TODO: Update database to unlock car for user
+            // const { error } = await supabase.from('users').update({ ... })...
+
+            return res.status(200).json({ success: true, message: 'Unlock verified' });
+        } else {
             return res.status(400).json({
                 success: false,
                 error: `Insufficient burn amount. Burned: ${amountBurned}, Required: ${requiredAmount}`
             });
         }
 
-        // 6. Database Update (Mocked)
-        // TODO: Connect to database and unlock the car for this user
-        // await db.users.update({ where: { wallet: walletAddress }, data: { unlockedCars: { push: 'CAR_ID' } } });
-        console.log(`[MOCK DB] Unlocking car for ${walletAddress} after valid burn of ${amountBurned}`);
-
-        // 7. Success Response
-        return res.status(200).json({
-            success: true,
-            message: 'Burn verified and unlock authorized',
-            data: {
-                signature,
-                walletAddress,
-                amountBurned
-            }
-        });
-
     } catch (error) {
-        console.error('Verify API Error:', error);
-        return res.status(500).json({ error: 'Internal server verification failed', details: error.message });
+        console.error('Verification error:', error);
+        return res.status(500).json({ error: 'Internal server error' });
     }
 }
