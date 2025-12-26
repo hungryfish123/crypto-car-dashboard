@@ -2,31 +2,17 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit, X, Lock } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
-import ManualBurnVerification from './ManualBurnVerification';
-import BurnerWalletDashboard from './BurnerWalletDashboard';
-import { useBurnerWallet } from '../hooks/useBurnerWallet';
 
-const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '', onRewardClaimed, onBurnerAuth }) => {
+const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '' }) => {
     const { user, authenticated, logout, login } = usePrivy();
-    const burnerWallet = useBurnerWallet();
     const [copied, setCopied] = React.useState(false);
     const [codeCopied, setCodeCopied] = React.useState(false);
-    const [showBurnerWallet, setShowBurnerWallet] = React.useState(false);
-    const [burnerAuthenticated, setBurnerAuthenticated] = React.useState(false);
 
-    // Check localStorage for burner auth on mount
-    React.useEffect(() => {
-        const isBurnerAuth = localStorage.getItem('burner_authenticated') === 'true';
-        if (isBurnerAuth && burnerWallet.hasWallet) {
-            setBurnerAuthenticated(true);
-        }
-    }, [burnerWallet.hasWallet]);
+    // Authentication check (Privy only)
+    const isAuthenticated = authenticated;
 
-    // Combined authentication check (Privy OR Burner wallet)
-    const isAuthenticated = authenticated || burnerAuthenticated;
-
-    // Wallet address - prioritize Privy, fallback to burner
-    const walletAddress = user?.wallet?.address || (burnerAuthenticated ? burnerWallet.walletAddress : '');
+    // Wallet address from Privy
+    const walletAddress = user?.wallet?.address || '';
     const shortAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not Connected';
 
     // Calculate stats
@@ -155,49 +141,19 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                         <div className="grid grid-cols-1 gap-3">
                             {!isAuthenticated ? (
-                                <>
-                                    <button
-                                        onClick={login}
-                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 border border-red-500/30 rounded-xl text-white text-sm font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-                                    >
-                                        <Wallet size={16} /> Connect Wallet
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            // Auto-authenticate with burner wallet
-                                            localStorage.setItem('burner_authenticated', 'true');
-                                            setBurnerAuthenticated(true);
-                                            setShowBurnerWallet(true);
-                                            if (onBurnerAuth) onBurnerAuth(burnerWallet.walletAddress);
-                                        }}
-                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-purple-300 text-sm font-bold uppercase tracking-wider transition-all"
-                                    >
-                                        <Zap size={16} /> Use Burner Wallet
-                                    </button>
-                                </>
+                                <button
+                                    onClick={login}
+                                    className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 border border-red-500/30 rounded-xl text-white text-sm font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+                                >
+                                    <Wallet size={16} /> Connect Wallet
+                                </button>
                             ) : (
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setShowBurnerWallet(true)}
-                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 rounded-xl text-purple-300 text-xs font-bold uppercase tracking-wider transition-all"
-                                    >
-                                        <Zap size={14} /> Burner
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (burnerAuthenticated) {
-                                                // Disconnect burner wallet
-                                                localStorage.removeItem('burner_authenticated');
-                                                setBurnerAuthenticated(false);
-                                            } else {
-                                                logout();
-                                            }
-                                        }}
-                                        className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
-                                    >
-                                        Disconnect
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="flex items-center justify-center gap-2 px-4 py-3 bg-red-600/20 hover:bg-red-600/40 border border-red-500/30 text-red-400 text-sm font-bold uppercase tracking-wider rounded-xl transition-all"
+                                >
+                                    Disconnect
+                                </button>
                             )}
                         </div>
                     </div>
@@ -285,11 +241,6 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </div>
                         </motion.div>
 
-                        {/* BURN VERIFICATION MODULE */}
-                        <ManualBurnVerification
-                            walletAddress={walletAddress}
-                            onRewardClaimed={onRewardClaimed}
-                        />
 
                         {/* ACHIEVEMENTS */}
                         <motion.div variants={itemVariants} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-5 flex flex-col overflow-hidden">
@@ -357,41 +308,6 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                 </div>
             </motion.div>
 
-            {/* Burner Wallet Modal */}
-            <AnimatePresence>
-                {showBurnerWallet && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-                        onClick={() => setShowBurnerWallet(false)}
-                    >
-                        {/* Backdrop */}
-                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-
-                        {/* Modal Content */}
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="relative z-10 w-full max-w-md"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setShowBurnerWallet(false)}
-                                className="absolute -top-2 -right-2 z-20 w-10 h-10 bg-black/80 border border-white/20 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:border-red-500/50 transition-all"
-                            >
-                                <X size={18} />
-                            </button>
-
-                            {/* Burner Wallet Dashboard */}
-                            <BurnerWalletDashboard />
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

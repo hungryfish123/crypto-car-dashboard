@@ -4,8 +4,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Lock, Flame, Check, Loader2 } from 'lucide-react';
-import { useBurnUnlock } from '../hooks/useBurnUnlock';
+import { ChevronLeft, ChevronRight, Lock, Check } from 'lucide-react';
 
 // Car models configuration - add new models here
 const CAR_MODELS = [
@@ -70,7 +69,6 @@ const CarModelSelector = ({
     ownedCars = ['bmw_m3_e30'], // Array of owned car IDs
     onPurchase // Callback when user wants to purchase: (carId, price) => void
 }) => {
-    const { handleBurnToUnlock, isBurning } = useBurnUnlock();
     const currentModel = CAR_MODELS[currentModelIndex] || CAR_MODELS[0];
     const hasMultipleModels = CAR_MODELS.length > 1;
     const isOwned = ownedCars.includes(currentModel.id);
@@ -94,12 +92,9 @@ const CarModelSelector = ({
     };
 
     const handlePurchase = async () => {
-        if (onPurchase && !isOwned && !isBurning) {
-            // Trigger Burn Transaction
-            await handleBurnToUnlock(currentModel.id, currentModel.price, () => {
-                // On success, notify parent to update state
-                onPurchase(currentModel.id, currentModel.price);
-            });
+        if (onPurchase && !isOwned) {
+            // Direct purchase/unlock
+            onPurchase(currentModel.id, currentModel.price);
         }
     };
 
@@ -183,25 +178,21 @@ const CarModelSelector = ({
                             {!isOwned && (
                                 <motion.button
                                     onClick={handlePurchase}
-                                    disabled={isBurning}
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{ delay: 0.3 }}
                                     className={`mt-6 px-6 py-3 
-                                             ${isBurning
-                                            ? 'bg-gray-800 cursor-wait border-gray-700'
-                                            : 'bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 border-orange-500/30'
-                                        }
+                                             bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 border-orange-500/30
                                              text-white font-bold uppercase tracking-wider text-sm rounded-xl
                                              border shadow-[0_0_20px_rgba(234,88,12,0.3)]
                                              hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all duration-300
                                              flex items-center justify-center gap-2 mx-auto`}
-                                    whileHover={!isBurning ? { scale: 1.05 } : {}}
-                                    whileTap={!isBurning ? { scale: 0.95 } : {}}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                     style={{ fontFamily: 'Rajdhani, sans-serif' }}
                                 >
-                                    {isBurning ? <Loader2 size={18} className="animate-spin" /> : <Flame size={18} />}
-                                    {isBurning ? 'Burning...' : 'Burn to Unlock'}
+                                    <Lock size={18} />
+                                    Unlock Car
                                 </motion.button>
                             )}
                         </motion.div>
