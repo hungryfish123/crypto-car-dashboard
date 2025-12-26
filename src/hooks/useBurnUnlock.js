@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, Transaction } from '@solana/web3.js';
+import { useWallets } from '@privy-io/react-auth';
+import { PublicKey, Transaction, Connection, clusterApiUrl } from '@solana/web3.js';
 import { createBurnCheckedInstruction, getAssociatedTokenAddress } from '@solana/spl-token';
 
 // Replace with your actual Devnet Mint Address
@@ -9,19 +9,24 @@ const MINT_ADDRESS = 'Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr';
 const REQUIRED_DECIMALS = 9; // Devnet Token usually 9
 
 export function useBurnUnlock() {
-    const { connection } = useConnection();
-    const { publicKey, sendTransaction } = useWallet();
+    const { wallets } = useWallets();
     const [isBurning, setIsBurning] = useState(false);
 
     const handleBurnToUnlock = useCallback(async (carId, carPrice, onSuccess) => {
-        if (!publicKey) {
-            alert('Please connect your wallet first!');
+        const solanaWallet = wallets.find(w => w.chainType === 'solana');
+
+        if (!solanaWallet) {
+            alert('Please connect your Solana wallet first!');
             return;
         }
 
         try {
             setIsBurning(true);
             console.log(`Initiating burn for ${carId}. Price: ${carPrice}`);
+
+            // Establish connection (Devnet)
+            const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+            const publicKey = new PublicKey(solanaWallet.address);
 
             // 1. Get Token Info & User ATA
             const mintPublicKey = new PublicKey(MINT_ADDRESS);
@@ -30,7 +35,6 @@ export function useBurnUnlock() {
             console.log('User ATA:', userATA.toString());
 
             // 2. Create Burn Instruction
-            // carPrice is assumed to be in full tokens, convert to raw units
             const amountToBurn = BigInt(carPrice * Math.pow(10, REQUIRED_DECIMALS));
 
             const burnIx = createBurnCheckedInstruction(
@@ -43,14 +47,18 @@ export function useBurnUnlock() {
 
             // 3. Build Transaction
             const transaction = new Transaction().add(burnIx);
-
             const { blockhash } = await connection.getLatestBlockhash();
             transaction.recentBlockhash = blockhash;
             transaction.feePayer = publicKey;
 
-            // 4. Send Transaction
+            // 4. Send Transaction using Privy Wallet Provider
+            console.log('Getting wallet provider...');
+            const provider = await solanaWallet.getProvider();
+
             console.log('Sending transaction...');
-            const signature = await sendTransaction(transaction, connection);
+            // Standard Solana provider interface
+            const { signature } = await provider.signAndSendTransaction(transaction);
+
             console.log('Transaction sent:', signature);
 
             // 5. Wait for Confirmation
@@ -86,11 +94,11 @@ export function useBurnUnlock() {
 
         } catch (error) {
             console.error('Burn failed:', error);
-            alert(`Burn failed: ${error.message}`);
+            alert(`Burn failed: ${error.message || error}`);
         } finally {
             setIsBurning(false);
         }
-    }, [connection, publicKey, sendTransaction]);
+    }, [wallets]);
 
     return { handleBurnToUnlock, isBurning };
 }
