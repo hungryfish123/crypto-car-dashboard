@@ -24,6 +24,7 @@ createRoot(document.getElementById('root')).render(
         appearance: {
           theme: 'dark',
           accentColor: '#EF4444',
+          walletChainType: 'solana-only',
         },
         embeddedWallets: {
           createOnLogin: 'off',
