@@ -622,6 +622,40 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
   );
 }
 
+// Basic Error Boundary for production safety
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("CRITICAL UI ERROR:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center p-8 text-center">
+          <h1 className="text-red-500 text-4xl font-bold mb-4 uppercase tracking-widest">System Failure</h1>
+          <p className="text-gray-400 mb-8 max-w-md">The application encountered a critical rendering error. This usually happens when data is missing or a service is unavailable.</p>
+          <div className="bg-red-900/20 border border-red-500/30 p-4 rounded-xl mb-8 w-full max-w-lg overflow-auto max-h-40">
+            <code className="text-red-400 text-xs text-left block whitespace-pre-wrap">{this.state.error?.toString()}</code>
+          </div>
+          <button
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+            className="px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold uppercase tracking-widest rounded-xl transition-all"
+          >
+            Reset App State & Reload
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   const { user, authenticated } = usePrivy();
   const [activePage, setActivePage] = useState('Garage');
@@ -643,20 +677,29 @@ function App() {
 
   // Access Gate State - Initialize from localStorage for persistence
   const [hasAccess, setHasAccess] = useState(() => {
-    return localStorage.getItem('garage_access') === 'true';
+    try {
+      return typeof window !== 'undefined' && localStorage.getItem('garage_access') === 'true';
+    } catch (e) {
+      console.warn("localStorage not accessible:", e);
+      return false;
+    }
   });
 
   // Auto-bypass gate if wallet is connected
   useEffect(() => {
     if (authenticated && !hasAccess) {
       setHasAccess(true);
-      localStorage.setItem('garage_access', 'true');
+      try {
+        localStorage.setItem('garage_access', 'true');
+      } catch (e) { console.error("Failed to save access state:", e); }
     }
   }, [authenticated, hasAccess]);
 
   const handleUnlock = () => {
     setHasAccess(true);
-    localStorage.setItem('garage_access', 'true');
+    try {
+      localStorage.setItem('garage_access', 'true');
+    } catch (e) { console.error("Failed to save access state:", e); }
   };
 
 
@@ -921,9 +964,10 @@ function App() {
       }
 
       // Real wallet connection
-      if (authenticated && user?.wallet?.address) {
-        console.log('Fetching data for:', user.wallet.address);
-        const data = await fetchUserData(user.wallet.address);
+      const walletAddress = user?.wallet?.address;
+      if (authenticated && walletAddress) {
+        console.log('Fetching data for:', walletAddress);
+        const data = await fetchUserData(walletAddress);
 
         if (data) {
           console.log('Data loaded:', data);
@@ -962,14 +1006,15 @@ function App() {
       return;
     }
 
-    if (authenticated && user?.wallet?.address) {
+    const walletAddress = user?.wallet?.address;
+    if (authenticated && walletAddress) {
       // Calculate net worth roughly for saving
       const currentNetWorth = inventory.reduce((sum, item) => {
         const price = parseInt(item.price?.replace(/[^0-9]/g, '') || 0);
         return sum + price;
       }, 0);
 
-      saveUserData(user.wallet.address, {
+      saveUserData(walletAddress, {
         carColor,
         inventory,
         equipped_parts: equippedPartsByCar,
@@ -1258,4 +1303,10 @@ function App() {
   );
 }
 
-export default App;
+export default function Root() {
+  return (
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
+  );
+}
