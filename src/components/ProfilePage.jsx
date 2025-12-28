@@ -100,7 +100,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                         <div>
                             <h2 className="text-4xl font-bold text-white uppercase tracking-wider mb-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                                {isAuthenticated ? (burnerAuthenticated ? 'Burner Driver' : 'Connected Driver') : 'Anonymous Racer'}
+                                {isAuthenticated ? 'Connected Driver' : 'Anonymous Racer'}
                             </h2>
                             <div className="flex items-center justify-center gap-2">
                                 <Shield size={16} className="text-yellow-500" />

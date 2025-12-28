@@ -623,6 +623,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 }
 
 function App() {
+  const { user, authenticated } = usePrivy();
   const [activePage, setActivePage] = useState('Garage');
   const [earnings, setEarnings] = useState(0); // Using this as 'Cash' for now
   const [environment, setEnvironment] = useState('city'); // Default environment lighting
@@ -640,8 +641,23 @@ function App() {
   const currentCarModel = CAR_MODELS[currentCarModelIndex] || CAR_MODELS[0];
   const isCurrentCarOwned = ownedCars.includes(currentCarModel.id);
 
-  // Access Gate State
-  const [hasAccess, setHasAccess] = useState(false);
+  // Access Gate State - Initialize from localStorage for persistence
+  const [hasAccess, setHasAccess] = useState(() => {
+    return localStorage.getItem('garage_access') === 'true';
+  });
+
+  // Auto-bypass gate if wallet is connected
+  useEffect(() => {
+    if (authenticated && !hasAccess) {
+      setHasAccess(true);
+      localStorage.setItem('garage_access', 'true');
+    }
+  }, [authenticated, hasAccess]);
+
+  const handleUnlock = () => {
+    setHasAccess(true);
+    localStorage.setItem('garage_access', 'true');
+  };
 
 
 
@@ -683,7 +699,7 @@ function App() {
   };
 
   // Auth
-  const { user, authenticated } = usePrivy();
+  // (usePrivy moved to top of App)
 
   // Demo Admin Mode - Press Ctrl+Shift+D to toggle
   const [demoMode, setDemoMode] = useState(false);
@@ -1007,7 +1023,7 @@ function App() {
   };
 
   if (!hasAccess) {
-    return <AccessGate onUnlock={() => setHasAccess(true)} />;
+    return <AccessGate onUnlock={handleUnlock} />;
   }
 
   return (
