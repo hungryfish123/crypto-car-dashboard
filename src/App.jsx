@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment, PerspectiveCamera, useGLTF, Center, Grid, useTexture } from '@react-three/drei';
 import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import { Lock, Bell } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
 import { AppleStyleDock } from './components/AppleStyleDock';
 import Marketplace from './components/Marketplace';
@@ -18,6 +18,7 @@ import ProfilePage from './components/ProfilePage';
 import CarCallouts from './components/CarCallouts';
 import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
 import AccessGate from './components/AccessGate';
+import AdminPanel from './components/AdminPanel'; // Admin Panel Import
 
 
 // Preload the models
@@ -656,6 +657,13 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Shared Marketplace Items
+import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
+
+// Placeholder for MARKETPLACE_ITEMS as it's not defined globally in the original code
+// In a real application, this would be imported from a data file or fetched.
+// const MARKETPLACE_ITEMS = [];
+
 function App() {
   const { user, authenticated } = usePrivy();
   const [activePage, setActivePage] = useState('Garage');
@@ -684,6 +692,7 @@ function App() {
       return false;
     }
   });
+  const [showAdmin, setShowAdmin] = useState(false); // Admin Panel State
 
   // Auto-bypass gate if wallet is connected
   useEffect(() => {
@@ -769,6 +778,17 @@ function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Admin Panel Shortcut (Alt + A)
+  useEffect(() => {
+    const handleAdminParams = (e) => {
+      if (e.altKey && e.key.toLowerCase() === 'a') {
+        setShowAdmin(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleAdminParams);
+    return () => window.removeEventListener('keydown', handleAdminParams);
   }, []);
 
   // Check if user is "authenticated" (real wallet OR demo mode)
@@ -857,6 +877,13 @@ function App() {
 
     // Trigger flash effect by incrementing counter
     setFlashTrigger(prev => prev + 1);
+    // Placeholder Items for Admin Panel Prop (This assumes MARKETPLACE_ITEMS is not exported, 
+    // so we might need to export it from Marketplace.jsx or define it centrally. 
+    // For now, I will assume Marketplace.jsx has the items. logic. 
+    // Actually, MARKETPLACE_ITEMS are defined inside Marketplace component which is not ideal.
+    // I will need to refactor or pass empty array first, then fix Marketplace.)
+    // TEMPORARY FIX: Define items here or move them to a constant file.
+    // BETTER APPROACH: Let's create a shared data/items.js file.
 
     // Play category-specific equip sound
     playEquip(item.category);
@@ -967,10 +994,15 @@ function App() {
       const walletAddress = user?.wallet?.address;
       if (authenticated && walletAddress) {
         console.log('Fetching data for:', walletAddress);
-        const data = await fetchUserData(walletAddress);
+        const pendingReferral = localStorage.getItem('pending_referral');
+        const data = await fetchUserData(walletAddress, pendingReferral);
 
         if (data) {
           console.log('Data loaded:', data);
+          if (pendingReferral) {
+            localStorage.removeItem('pending_referral');
+            console.log('Cleared pending referral:', pendingReferral);
+          }
           setCarColor(data.car_color || '#FF0000');
           setInventory(data.inventory || []);
 
@@ -1182,12 +1214,40 @@ function App() {
         </div>
       )}
 
-      {/* Marketplace Layer */}
-      {activePage === 'Marketplace' && (
-        <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm">
-          <Marketplace addToInventory={addToInventory} />
-        </div>
-      )}
+      {/* Pages Overlay */}
+      <AnimatePresence>
+        {activePage === 'Garage' && (
+          <GarageHUD
+            carColor={carColor}
+            setActivePage={setActivePage}
+            inventory={inventory}
+            equippedParts={equippedParts}
+            equipItem={equipItem}
+            unequipItem={unequipItem}
+            setDraggedItem={setDraggedItem}
+            draggedItem={draggedItem}
+          />
+        )}
+
+        {/* Admin Panel Overlay */}
+        {showAdmin && (
+          <AdminPanel
+            onClose={() => setShowAdmin(false)}
+            items={MARKETPLACE_ITEMS} // Pass all items to admin panel
+          />
+        )}
+
+        {activePage === 'Marketplace' && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="absolute inset-0 z-10 bg-black/80 backdrop-blur-sm"
+          >
+            <Marketplace addToInventory={addToInventory} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Race Page - Locked Interface */}
       {activePage === 'Race' && (
@@ -1253,19 +1313,7 @@ function App() {
       )}
 
 
-      {/* Garage HUD - Only visible in Garage tab */}
-      {activePage === 'Garage' && (
-        <GarageHUD
-          carColor={carColor}
-          setActivePage={setActivePage}
-          inventory={inventory}
-          equippedParts={equippedParts}
-          equipItem={equipItem}
-          unequipItem={unequipItem}
-          setDraggedItem={setDraggedItem}
-          draggedItem={draggedItem}
-        />
-      )}
+
 
       {/* Paint Shop - Only visible in Paint Shop tab */}
       {activePage === 'Paint Shop' && (

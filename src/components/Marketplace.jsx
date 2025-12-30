@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Search, Filter, Package, X, SlidersHorizontal } from 'lucide-react';
 import MarketplaceItem from './MarketplaceItem';
 import MarketplacePopup from './MarketplacePopup';
 import LoginButton from './LoginButton';
-import { Search, Filter, Package, X, SlidersHorizontal } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { supabase } from '../supabaseClient';
+import { fetchTokenData } from '../services/tokenDataService';
+import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 const Marketplace = ({ addToInventory }) => {
     const [searchTerm, setSearchTerm] = useState('');
@@ -11,360 +14,72 @@ const Marketplace = ({ addToInventory }) => {
     const [maxPrice, setMaxPrice] = useState(100000);
     const [selectedItem, setSelectedItem] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
+    const [items, setItems] = useState(MARKETPLACE_ITEMS);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const categories = ['All', 'Engines', 'Turbos', 'Suspensions', 'Wheels', 'Special'];
 
-    const items = [
-        {
-            id: 'eng_lv1',
-            title: '1.0L Rusty & Old',
-            description: 'Barely runs. Good for a project car or an anchor.',
-            price: '500 CR',
-            numPrice: 500,
-            image: '/level1.png',
-            category: 'Engines',
-            rarity: 'bg-gray-500',
-            supply: '5000/5000',
-            holders: 4210,
-            marketCap: '$2.5M',
-            cashback: '1.0%',
-            rarityLevel: 1
-        },
-        {
-            id: 'eng_lv2',
-            title: '2.0L Diesel',
-            description: 'Reliable workhorse. High torque, low excitement.',
-            price: '1,500 CR',
-            numPrice: 1500,
-            image: '/level2.png',
-            category: 'Engines',
-            rarity: 'bg-green-500',
-            supply: '2500/2500',
-            holders: 1850,
-            marketCap: '$4.2M',
-            cashback: '1.5%',
-            rarityLevel: 2
-        },
-        {
-            id: 'eng_lv3',
-            title: 'V8 Smooth',
-            description: 'The gold standard. Good power and a beautiful sound.',
-            price: '4,500 CR',
-            numPrice: 4500,
-            image: '/level3.png',
-            category: 'Engines',
-            rarity: 'bg-blue-500',
-            supply: '1000/1000',
-            holders: 850,
-            marketCap: '$6.8M',
-            cashback: '2.5%',
-            rarityLevel: 3
-        },
-        {
-            id: 'eng_lv4',
-            title: 'V12 Power',
-            description: 'Serious performance for serious drivers. Expect high maintenance.',
-            price: '12,000 CR',
-            numPrice: 12000,
-            image: '/level4.png',
-            category: 'Engines',
-            rarity: 'bg-purple-500',
-            supply: '250/250',
-            holders: 180,
-            marketCap: '$12.5M',
-            cashback: '4.0%',
-            rarityLevel: 4
-        },
-        {
-            id: 'eng_lv5',
-            title: 'W16 Legendary',
-            description: 'A technological marvel. Unmatched speed and power.',
-            price: '50,000 CR',
-            numPrice: 50000,
-            image: '/level5.png',
-            category: 'Engines',
-            rarity: 'bg-yellow-500',
-            supply: '10/10',
-            holders: 8,
-            marketCap: '$45.0M',
-            cashback: '8.5%',
-            rarityLevel: 5
-        },
-        // Turbos
-        {
-            id: 'turbo_lv1',
-            title: 'Junk Turbo',
-            description: 'Found in a junkyard. It whistles, but that is about it.',
-            price: '800 CR',
-            numPrice: 800,
-            image: '/turbo1.png',
-            category: 'Turbos',
-            rarity: 'bg-gray-500',
-            supply: '3500/3500',
-            holders: 2900,
-            marketCap: '$1.8M',
-            cashback: '1.0%',
-            rarityLevel: 1
-        },
-        {
-            id: 'turbo_lv2',
-            title: 'Small Turbo',
-            description: 'Standard factory issue. Adds a little kick.',
-            price: '2,500 CR',
-            numPrice: 2500,
-            image: '/turbo2.png',
-            category: 'Turbos',
-            rarity: 'bg-green-500',
-            supply: '1200/1200',
-            holders: 950,
-            marketCap: '$3.5M',
-            cashback: '1.8%',
-            rarityLevel: 2
-        },
-        {
-            id: 'turbo_lv3',
-            title: 'High Pressure Turbo',
-            description: 'Aftermarket street kit. Now we are talking.',
-            price: '6,000 CR',
-            numPrice: 6000,
-            image: '/turbo3.png',
-            category: 'Turbos',
-            rarity: 'bg-blue-500',
-            supply: '600/600',
-            holders: 420,
-            marketCap: '$7.2M',
-            cashback: '3.0%',
-            rarityLevel: 3
-        },
-        {
-            id: 'turbo_lv4',
-            title: 'Twin Turbo Setup',
-            description: 'Lag? What lag? relentless acceleration.',
-            price: '18,000 CR',
-            numPrice: 18000,
-            image: '/turbo4.png',
-            category: 'Turbos',
-            rarity: 'bg-purple-500',
-            supply: '150/150',
-            holders: 110,
-            marketCap: '$15.0M',
-            cashback: '4.5%',
-            rarityLevel: 4
-        },
-        {
-            id: 'turbo_lv5',
-            title: 'Jet Turbine Swap',
-            description: 'Stolen from an aircraft. Dangerous and absolutely necessary.',
-            price: '65,000 CR',
-            numPrice: 65000,
-            image: '/turbo5.png',
-            category: 'Turbos',
-            rarity: 'bg-yellow-500',
-            supply: '3/3',
-            holders: 2,
-            marketCap: '$80.0M',
-            cashback: '10.0%',
-            rarityLevel: 5
-        },
-        // Suspensions
-        {
-            id: 'susp_lv1',
-            title: 'Pen Spring',
-            description: 'Literally taken from a ballpoint pen. Bouncy.',
-            price: '200 CR',
-            numPrice: 200,
-            image: '/suspension1.png',
-            category: 'Suspensions',
-            rarity: 'bg-gray-500',
-            supply: '10000/10000',
-            holders: 8500,
-            marketCap: '$50k',
-            cashback: '0.5%',
-            rarityLevel: 1
-        },
-        {
-            id: 'susp_lv2',
-            title: 'Rusty Coils',
-            description: 'Stiff, noisy, and dangerous. But better than nothing.',
-            price: '1,200 CR',
-            numPrice: 1200,
-            image: '/suspension2.png',
-            category: 'Suspensions',
-            rarity: 'bg-green-500',
-            supply: '5000/5000',
-            holders: 3200,
-            marketCap: '$800k',
-            cashback: '1.2%',
-            rarityLevel: 2
-        },
-        {
-            id: 'susp_lv3',
-            title: 'Sport Suspension',
-            description: 'Factory sport tune. Good handling for the streets.',
-            price: '4,800 CR',
-            numPrice: 4800,
-            image: '/suspension3.png',
-            category: 'Suspensions',
-            rarity: 'bg-blue-500',
-            supply: '1500/1500',
-            holders: 900,
-            marketCap: '$3.5M',
-            cashback: '3.0%',
-            rarityLevel: 3
-        },
-        {
-            id: 'susp_lv4',
-            title: 'Air Suspension',
-            description: 'Variable ride height. Drop it low for the show.',
-            price: '15,000 CR',
-            numPrice: 15000,
-            image: '/suspension4.png',
-            category: 'Suspensions',
-            rarity: 'bg-purple-500',
-            supply: '400/400',
-            holders: 250,
-            marketCap: '$18.2M',
-            cashback: '6.5%',
-            rarityLevel: 4
-        },
-        {
-            id: 'susp_lv5',
-            title: 'Magnetic Suspension',
-            description: 'Electromagnetic dampers that react in milliseconds. Alien tech.',
-            price: '55,000 CR',
-            numPrice: 55000,
-            image: '/suspension5.png',
-            category: 'Suspensions',
-            rarity: 'bg-yellow-500',
-            supply: '50/50',
-            holders: 35,
-            marketCap: '$60.0M',
-            cashback: '15.0%',
-            rarityLevel: 5
-        },
-        // Wheels
-        {
-            id: 'wheel_lv1',
-            title: 'Shopping Cart Wheel',
-            description: 'Stolen from a supermarket. Wobbly at high speeds.',
-            price: '150 CR',
-            numPrice: 150,
-            image: '/wheel1.png',
-            category: 'Wheels',
-            rarity: 'bg-gray-500',
-            supply: '25000/25000',
-            holders: 12500,
-            marketCap: '$15k',
-            cashback: '0.2%',
-            rarityLevel: 1
-        },
-        {
-            id: 'wheel_lv2',
-            title: 'Bicycle Wheel',
-            description: 'Aerodynamic, but might snap under the weight of the car.',
-            price: '900 CR',
-            numPrice: 900,
-            image: '/wheel2.png',
-            category: 'Wheels',
-            rarity: 'bg-green-500',
-            supply: '8000/8000',
-            holders: 4100,
-            marketCap: '$450k',
-            cashback: '1.0%',
-            rarityLevel: 2
-        },
-        {
-            id: 'wheel_lv3',
-            title: 'Mini Van Alloy',
-            description: 'Sensible, reliable, and totally boring. School run spec.',
-            price: '3,500 CR',
-            numPrice: 3500,
-            image: '/wheel3.png',
-            category: 'Wheels',
-            rarity: 'bg-blue-500',
-            supply: '2000/2000',
-            holders: 1200,
-            marketCap: '$2.8M',
-            cashback: '2.5%',
-            rarityLevel: 3
-        },
-        {
-            id: 'wheel_lv4',
-            title: 'NASCAR Steelie',
-            description: 'Built for speed and left turns only. Heavy duty.',
-            price: '14,000 CR',
-            numPrice: 14000,
-            image: '/wheel4.png',
-            category: 'Wheels',
-            rarity: 'bg-purple-500',
-            supply: '500/500',
-            holders: 300,
-            marketCap: '$15.5M',
-            cashback: '5.8%',
-            rarityLevel: 4
-        },
-        {
-            id: 'wheel_lv5',
-            title: 'F1 Pirelli Slick',
-            description: 'The pinnacle of grip. Sticky, wide, and illegal on the street.',
-            price: '60,000 CR',
-            numPrice: 60000,
-            image: '/wheel5.png',
-            category: 'Wheels',
-            rarity: 'bg-yellow-500',
-            supply: '25/25',
-            holders: 15,
-            marketCap: '$85.0M',
-            cashback: '18.5%',
-            rarityLevel: 5
-        },
-        // Special Items (Rainbow/Holographic)
-        {
-            id: 'special_seat',
-            title: 'Sparco Racing Seat',
-            description: 'Carbon fiber bucket seat. Weight reduction +100.',
-            price: '25,000 CR',
-            numPrice: 25000,
-            image: '/sparco seat.png',
-            category: 'Special',
-            rarity: 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500',
-            supply: '50/50',
-            holders: 45,
-            marketCap: '$2.5M',
-            cashback: '8.0%',
-            rarityLevel: 6
-        },
-        {
-            id: 'special_brakes',
-            title: 'Ceramic Brembo Brakes',
-            description: 'Stops on a dime. Glowing red hot rotors.',
-            price: '35,000 CR',
-            numPrice: 35000,
-            image: '/ceramic breaks.png',
-            category: 'Special',
-            rarity: 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500',
-            supply: '30/30',
-            holders: 28,
-            marketCap: '$4.2M',
-            cashback: '10.5%',
-            rarityLevel: 6
-        },
-        {
-            id: 'special_nitro',
-            title: 'Nitro Boost System',
-            description: 'Press button to say goodbye to your opponents.',
-            price: '100,000 CR',
-            numPrice: 100000,
-            image: '/nitro boost.png',
-            category: 'Special',
-            rarity: 'bg-gradient-to-r from-red-500 via-yellow-500 to-blue-500',
-            supply: '5/5',
-            holders: 3,
-            marketCap: '$50.0M',
-            cashback: '25.0%',
-            rarityLevel: 7
-        }
-    ];
+    // Fetch Crypto Data
+    React.useEffect(() => {
+        const loadCryptoData = async () => {
+            console.log('[Marketplace] Loading crypto data...');
+
+            // 1. Get mappings from Supabase
+            const { data: mappings, error } = await supabase.from('item_mappings').select('*');
+            console.log('[Marketplace] Mappings from DB:', mappings, 'Error:', error);
+
+            // Build hidden items map
+            const hiddenMap = {};
+            const itemMap = {};
+            if (mappings) {
+                mappings.forEach(m => {
+                    itemMap[m.item_id] = m.contract_address;
+                    hiddenMap[m.item_id] = m.hidden || false;
+                });
+            }
+            console.log('[Marketplace] Hidden items:', hiddenMap);
+
+            // 2. Create NEW item objects with crypto data, filtering hidden ones
+            const updatedItems = await Promise.all(MARKETPLACE_ITEMS.map(async (item) => {
+                // Skip hidden items
+                if (hiddenMap[item.id]) {
+                    return { ...item, hidden: true };
+                }
+
+                const ca = itemMap[item.id];
+                if (ca) {
+                    console.log(`[Marketplace] Fetching token data for ${item.id} (${ca})`);
+                    const tokenData = await fetchTokenData(ca);
+                    console.log(`[Marketplace] Token data for ${item.id}:`, tokenData);
+
+                    if (tokenData && tokenData.priceUsd) {
+                        return {
+                            ...item,
+                            isCrypto: true,
+                            ca: ca,
+                            price: `$${tokenData.priceUsd.toFixed(6)}`,
+                            marketCap: tokenData.marketCap > 0 ? `$${(tokenData.marketCap / 1000).toFixed(1)}k` : item.marketCap
+                        };
+                    }
+                    // CA exists but no price data yet
+                    return { ...item, isCrypto: true, ca: ca };
+                }
+                return item; // No CA, return unchanged
+            }));
+
+            // Filter out hidden items
+            const visibleItems = updatedItems.filter(item => !item.hidden);
+            console.log('[Marketplace] Visible items:', visibleItems.length);
+            setItems(visibleItems);
+        };
+
+        loadCryptoData();
+        // Poll every 30s
+        const interval = setInterval(loadCryptoData, 30000);
+        return () => clearInterval(interval);
+    }, [refreshTrigger]);
+    // Items imported from data file
+
 
     const filteredItems = items
         .filter(item => {
@@ -496,6 +211,8 @@ const Marketplace = ({ addToInventory }) => {
                                 holders={item.holders}
                                 marketCap={item.marketCap}
                                 cashback={item.cashback}
+                                isCrypto={item.isCrypto || false}
+                                ca={item.ca || ''}
                                 onClick={() => setSelectedItem(item)}
                             />
                         </motion.div>

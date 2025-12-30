@@ -1,30 +1,57 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { verifyReferralCode } from '../dbServices';
 
 const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
     const [inputCode, setInputCode] = useState('');
     const [error, setError] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const normalizedInput = inputCode.toUpperCase().trim();
-        const isCorrect = Array.isArray(correctCode)
+        setIsLoading(true);
+
+        const isMasterCode = Array.isArray(correctCode)
             ? correctCode.includes(normalizedInput)
             : normalizedInput === correctCode;
 
-        if (isCorrect) {
-            setIsUnlocked(true);
-            // Wait for exit animation
-            setTimeout(() => {
-                onUnlock();
-            }, 800);
-        } else {
-            setError(true);
-            setInputCode('');
-            setTimeout(() => setError(false), 2000);
+        if (isMasterCode) {
+            unlock();
+            return;
         }
+
+        // Check if it's a valid referral code
+        try {
+            const { valid } = await verifyReferralCode(normalizedInput);
+            if (valid) {
+                localStorage.setItem('pending_referral', normalizedInput);
+                unlock();
+            } else {
+                fail();
+            }
+        } catch (err) {
+            console.error("Referral validation failed:", err);
+            fail();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const unlock = () => {
+        setIsUnlocked(true);
+        setTimeout(() => {
+            onUnlock();
+        }, 800);
+    };
+
+    const fail = () => {
+        setError(true);
+        setInputCode('');
+        setIsLoading(false);
+        setTimeout(() => setError(false), 2000);
     };
 
     return (
@@ -112,17 +139,30 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                         <AlertCircle size={20} />
                                     </motion.div>
                                 )}
+
+                                {isLoading && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-red-500"
+                                    >
+                                        <Loader2 size={20} className="animate-spin" />
+                                    </motion.div>
+                                )}
                             </div>
 
-                            {/* Submit Button */}
                             <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: !isLoading ? 1.02 : 1 }}
+                                whileTap={{ scale: !isLoading ? 0.98 : 1 }}
                                 type="submit"
-                                className="mt-6 w-full group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-800 px-6 py-4 text-white font-bold tracking-wider transition-all hover:brightness-110 active:brightness-90"
+                                disabled={isLoading}
+                                className={`mt-6 w-full group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-800 px-6 py-4 text-white font-bold tracking-wider transition-all hover:brightness-110 active:brightness-90 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                <span className="relative z-10 font-['Orbitron']">AUTHENTICATE</span>
-                                <ArrowRight className="relative z-10 w-5 h-5 transition-transform group-hover:translate-x-1" />
+                                <span className="relative z-10 font-['Orbitron']">
+                                    {isLoading ? 'VERIFYING...' : isUnlocked ? 'ACCESS GRANTED' : 'AUTHENTICATE'}
+                                </span>
+                                {!isLoading && !isUnlocked && <ArrowRight className="relative z-10 w-5 h-5 transition-transform group-hover:translate-x-1" />}
+                                {isLoading && <Loader2 className="relative z-10 w-5 h-5 animate-spin" />}
 
                                 {/* Button Glow Effect */}
                                 <div className="absolute inset-0 -z-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]" />

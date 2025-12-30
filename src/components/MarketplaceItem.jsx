@@ -12,6 +12,8 @@ const MarketplaceItem = ({
     cashback = '0%',
     rarityLevel = 1,
     rarityColor = 'bg-gray-500',
+    isCrypto = false,
+    ca = '',
     onClick
 }) => {
     // Map rarity level to specific colors
@@ -39,7 +41,12 @@ const MarketplaceItem = ({
             className={`group relative bg-[#0a0a0a]/80 backdrop-blur-md rounded-xl overflow-hidden hover:scale-[1.02] transition-all duration-300 shadow-xl flex flex-col h-[420px] cursor-pointer ${isSpecial ? 'rainbow-border' : 'border border-white/5'}`}
         >
             {/* Price Badge (Top Right) */}
-            <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10">
+            <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
+                {isCrypto && (
+                    <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
+                    </span>
+                )}
                 <span className="text-sm font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{price}</span>
             </div>
 
@@ -110,6 +117,17 @@ const MarketplaceItem = ({
                         </div>
                     </div>
                 </div>
+
+                {/* CA Display for Crypto Items */}
+                {isCrypto && ca && (
+                    <div className="mt-4 pt-4 border-t border-white/10 w-full text-center">
+                        <p className="text-[10px] text-gray-500 font-mono mb-1">Contract Address</p>
+                        <div className="text-[10px] text-blue-400 font-mono bg-blue-500/10 rounded px-2 py-1 truncate select-all cursor-text flex items-center justify-center gap-2">
+                            {ca.slice(0, 6)}...{ca.slice(-6)}
+                            <span className="text-[8px] opacity-50">(Click to Copy)</span>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

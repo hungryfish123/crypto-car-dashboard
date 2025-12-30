@@ -1,18 +1,33 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit, X, Lock } from 'lucide-react';
+import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit, X, Lock, Clock } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import { getReferralHistory } from '../dbServices';
 
 const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '' }) => {
     const { user, authenticated, logout, login } = usePrivy();
     const [copied, setCopied] = React.useState(false);
     const [codeCopied, setCodeCopied] = React.useState(false);
+    const [referrals, setReferrals] = React.useState([]);
+    const [loadingReferrals, setLoadingReferrals] = React.useState(true);
 
     // Authentication check (Privy only)
     const isAuthenticated = authenticated;
 
     // Wallet address from Privy
     const walletAddress = user?.wallet?.address || '';
+
+    React.useEffect(() => {
+        const fetchReferrals = async () => {
+            if (walletAddress) {
+                setLoadingReferrals(true);
+                const history = await getReferralHistory(walletAddress);
+                setReferrals(history || []);
+                setLoadingReferrals(false);
+            }
+        };
+        fetchReferrals();
+    }, [walletAddress]);
     const shortAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : 'Not Connected';
 
     // Calculate stats
@@ -191,9 +206,9 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                     <motion.div variants={itemVariants} className={`grid grid-cols-4 gap-4 ${!isAuthenticated ? 'blur-sm pointer-events-none' : ''}`}>
                         {[
                             { label: 'Total Value', value: `${(totalValue / 1000).toFixed(1)}k`, icon: TrendingUp, color: 'text-green-500', unit: 'CR' },
-                            { label: 'Parts Owned', value: totalParts, icon: Package, color: 'text-blue-500', unit: 'items' },
+                            { label: 'Total Invites', value: referrals.length, icon: Zap, color: 'text-blue-500', unit: 'Recruits' },
                             { label: 'Equipped', value: `${equippedCount}/5`, icon: Car, color: 'text-purple-500', unit: 'slots' },
-                            { label: 'Achievements', value: `${achievements.filter(a => a.unlocked).length}`, icon: Trophy, color: 'text-yellow-500', unit: 'unlocked' },
+                            { label: 'Fee Bonus', value: `${referrals.length * 5}%`, icon: Trophy, color: 'text-yellow-500', unit: 'Yield Boost' },
                         ].map((stat, idx) => (
                             <div key={idx} className="bg-black/40 border border-white/10 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between hover:border-red-500/30 transition-colors group h-32">
                                 <div className="flex items-start justify-between">
@@ -233,10 +248,24 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto">
+                            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
                                 <div className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-2 border-b border-white/5 pb-1">Recent Invites</div>
-                                <div className="space-y-2 text-xs">
-                                    <div className="text-center text-gray-600 italic py-2 text-[10px]">No invites yet</div>
+                                <div className="space-y-2">
+                                    {loadingReferrals ? (
+                                        <div className="text-center py-4 text-gray-600 animate-pulse text-[10px] uppercase">Tracking...</div>
+                                    ) : referrals.length === 0 ? (
+                                        <div className="text-center text-gray-600 italic py-2 text-[10px]">No invites yet</div>
+                                    ) : (
+                                        referrals.map((ref, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2 bg-white/5 border border-white/5 rounded-lg group hover:border-blue-500/30 transition-all">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-mono text-gray-400">{ref.wallet_id?.slice(0, 6)}...{ref.wallet_id?.slice(-4)}</span>
+                                                    <span className="text-[8px] text-gray-600 flex items-center gap-1"><Clock size={8} /> {new Date(ref.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="text-[8px] font-bold text-green-500 bg-green-500/10 px-1.5 py-0.5 rounded">ACTIVE</div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </motion.div>
