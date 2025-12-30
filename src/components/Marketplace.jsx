@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Search, Filter, Package, X, SlidersHorizontal } from 'lucide-react';
 import MarketplaceItem from './MarketplaceItem';
 import MarketplacePopup from './MarketplacePopup';
 import LoginButton from './LoginButton';
 import { supabase } from '../supabaseClient';
-import { fetchTokenData } from '../services/tokenDataService';
+import { useTokenMetrics } from '../hooks/useTokenMetrics';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 const Marketplace = ({ addToInventory }) => {
@@ -15,57 +15,67 @@ const Marketplace = ({ addToInventory }) => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [showFilters, setShowFilters] = useState(false);
     const [items, setItems] = useState(MARKETPLACE_ITEMS);
-    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     const categories = ['All', 'Engines', 'Turbos', 'Suspensions', 'Wheels', 'Special'];
 
-    // Fetch Crypto Data
-    React.useEffect(() => {
-        const loadCryptoData = async () => {
-            console.log('[Marketplace] Loading crypto data...');
+    // Use cached token metrics from Edge Function
+    const { data: tokenMetrics, loading: metricsLoading } = useTokenMetrics();
 
-            // 1. Get mappings from Supabase
-            const { data: mappings, error } = await supabase.from('item_mappings').select('*');
-            console.log('[Marketplace] Mappings from DB:', mappings, 'Error:', error);
+    // Merge token metrics with marketplace items
+    useEffect(() => {
+        const loadItems = async () => {
+            console.log('[Marketplace] Loading items with metrics:', tokenMetrics);
 
-            // Build hidden items map
-            const hiddenMap = {};
-            const itemMap = {};
+            // Get mappings from Supabase for hidden status, CAs, and manual overrides
+            const { data: mappings } = await supabase.from('item_mappings').select('*');
+
+            const mappingMap = {};
             if (mappings) {
                 mappings.forEach(m => {
-                    itemMap[m.item_id] = m.contract_address;
-                    hiddenMap[m.item_id] = m.hidden || false;
+                    mappingMap[m.item_id] = m;
                 });
             }
-            console.log('[Marketplace] Hidden items:', hiddenMap);
 
-            // 2. Create NEW item objects with crypto data, filtering hidden ones
-            const updatedItems = await Promise.all(MARKETPLACE_ITEMS.map(async (item) => {
+            // Merge items with token metrics and DB overrides
+            const updatedItems = MARKETPLACE_ITEMS.map(item => {
+                const dbMapping = mappingMap[item.id] || {};
+
                 // Skip hidden items
-                if (hiddenMap[item.id]) {
+                if (dbMapping.hidden) {
                     return { ...item, hidden: true };
                 }
 
-                const ca = itemMap[item.id];
-                if (ca) {
-                    console.log(`[Marketplace] Fetching token data for ${item.id} (${ca})`);
-                    const tokenData = await fetchTokenData(ca);
-                    console.log(`[Marketplace] Token data for ${item.id}:`, tokenData);
+                const ca = dbMapping.contract_address;
+                const metrics = tokenMetrics?.[item.id];
 
-                    if (tokenData && tokenData.priceUsd) {
-                        return {
-                            ...item,
-                            isCrypto: true,
-                            ca: ca,
-                            price: `$${tokenData.priceUsd.toFixed(6)}`,
-                            marketCap: tokenData.marketCap > 0 ? `$${(tokenData.marketCap / 1000).toFixed(1)}k` : item.marketCap
-                        };
-                    }
-                    // CA exists but no price data yet
-                    return { ...item, isCrypto: true, ca: ca };
+                // Base merged item
+                let mergedItem = {
+                    ...item,
+                    isCrypto: !!(ca || metrics?.ca),
+                    ca: ca || metrics?.ca,
+                    buyUrl: dbMapping.buy_url || null
+                };
+
+                // Apply metrics if available
+                if (metrics) {
+                    mergedItem = {
+                        ...mergedItem,
+                        price: metrics.price > 0 ? `$${metrics.price.toFixed(6)}` : item.price,
+                        marketCap: metrics.marketCap > 0 ? `$${(metrics.marketCap / 1000).toFixed(1)}k` : item.marketCap,
+                        holders: metrics.holderCount || item.holders
+                    };
                 }
-                return item; // No CA, return unchanged
-            }));
+
+                // Apply manual overrides from DB (Yield and Supply)
+                if (dbMapping.yield) {
+                    mergedItem.cashback = dbMapping.yield; // Using cashback field as 'yield' display
+                }
+                if (dbMapping.override_supply) {
+                    mergedItem.supply = dbMapping.override_supply;
+                }
+
+                return mergedItem;
+            });
 
             // Filter out hidden items
             const visibleItems = updatedItems.filter(item => !item.hidden);
@@ -73,11 +83,8 @@ const Marketplace = ({ addToInventory }) => {
             setItems(visibleItems);
         };
 
-        loadCryptoData();
-        // Poll every 30s
-        const interval = setInterval(loadCryptoData, 30000);
-        return () => clearInterval(interval);
-    }, [refreshTrigger]);
+        loadItems();
+    }, [tokenMetrics]);
     // Items imported from data file
 
 

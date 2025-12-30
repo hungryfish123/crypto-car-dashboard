@@ -130,15 +130,19 @@ const ProductDetails = ({ data, rawItem, addToInventory, onClose }) => {
 
     const handlePurchase = () => {
         if (isConfirmed) return; // Prevent double-click
-        setIsConfirmed(true);
 
-        // Wait 1.5 seconds, then add to inventory and close
-        setTimeout(() => {
-            if (addToInventory) {
-                addToInventory(rawItem);
-            }
-            onClose();
-        }, 1500);
+        if (rawItem.buyUrl) {
+            window.open(rawItem.buyUrl, '_blank');
+        } else {
+            // Fallback for items without a link
+            setIsConfirmed(true);
+            setTimeout(() => {
+                if (addToInventory) {
+                    addToInventory(rawItem);
+                }
+                onClose();
+            }, 1000);
+        }
     };
 
     return (
@@ -190,13 +194,13 @@ const ProductDetails = ({ data, rawItem, addToInventory, onClose }) => {
                 <button
                     onClick={handlePurchase}
                     disabled={isConfirmed}
-                    className={`px-10 py-4 font-bold uppercase tracking-widest rounded transition-all shadow-lg ${isConfirmed
-                        ? 'bg-green-500 text-white scale-110 animate-pulse cursor-not-allowed'
-                        : `bg-green-600 text-white hover:bg-green-500 active:scale-95 ${data.colors?.isSpecial ? 'rainbow-button' : ''}`
+                    className={`px-12 py-4 font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg text-sm ${isConfirmed
+                        ? 'bg-green-500 text-white scale-110 animate-pulse cursor-not-allowed border-none'
+                        : `${data.colors.bg} text-white hover:brightness-125 active:scale-95 border-b-4 border-black/30 ${data.colors?.isSpecial ? 'rainbow-button' : ''}`
                         }`}
-                    style={{ transition: 'all 0.3s ease' }}
+                    style={{ transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
                 >
-                    {isConfirmed ? '✓ CONFIRMED' : 'Claim Asset (Free)'}
+                    {isConfirmed ? '✓ CONFIRMED' : 'Buy Now'}
                 </button>
             </motion.div>
         </motion.div>
