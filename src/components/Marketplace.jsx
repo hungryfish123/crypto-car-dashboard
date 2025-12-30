@@ -112,20 +112,18 @@ const Marketplace = ({ addToInventory }) => {
             {/* Header - Slim & Inline */}
             <div className="flex items-center justify-between h-20 px-8 z-10 w-full bg-black/60 backdrop-blur-md border-b border-white/10">
 
-                {/* Left: Gallery Title & Tabs */}
-                <div className="flex items-center gap-8">
-                    <h1 className="text-xl font-bold text-white italic tracking-wide uppercase border-r border-white/20 pr-6 mr-2 hidden md:block" style={{ fontFamily: 'Exo 2, sans-serif' }}>
-                        Gallery <span className="text-red-600">/</span>
-                    </h1>
-                    <div className="flex gap-4">
+                {/* Left: Tabs Section */}
+                <div className="flex items-center">
+                    <div className="flex gap-8">
                         {categories.map(cat => (
                             <button
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
-                                className={`text-xs font-bold uppercase tracking-widest pb-1 transition-all ${activeCategory === cat
+                                className={`text-sm font-bold uppercase tracking-[0.2em] pb-2 transition-all ${activeCategory === cat
                                     ? 'text-white border-b-2 border-red-600'
                                     : 'text-gray-500 hover:text-white hover:border-b-2 hover:border-gray-500'
                                     }`}
+                                style={{ fontFamily: 'Rajdhani, sans-serif' }}
                             >
                                 {cat}
                             </button>
