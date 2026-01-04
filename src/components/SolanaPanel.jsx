@@ -122,7 +122,7 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel }) => {
+const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {} }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { claimRewards, loading: claiming } = useClaimRewards();
     const { user } = usePrivy();
@@ -154,11 +154,52 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
         }
     };
 
-    const stats = currentCarModel?.stats || {
-        weight: '---',
-        power: '---',
-        topSpeed: '---',
-        acceleration: '---'
+    // Calculate stat bonuses from equipped parts
+    // Level 1: +5%, Level 2: +10%, Level 3: +15%, etc. (level × 5%)
+    // Special items: +50% all stats except weight
+    const calculateStatBonus = () => {
+        let totalBonus = 0;
+        let specialBonus = 0;
+
+        Object.values(equippedParts).forEach(part => {
+            if (!part) return;
+
+            const level = part.rarityLevel || 1;
+
+            if (part.category === 'Special') {
+                // Special items give 50% boost
+                specialBonus += 50;
+            } else {
+                // Regular items give level × 5% boost
+                totalBonus += level * 5;
+            }
+        });
+
+        return { regularBonus: totalBonus, specialBonus };
+    };
+
+    const { regularBonus, specialBonus } = calculateStatBonus();
+    const totalBonus = regularBonus + specialBonus;
+
+    const baseStats = currentCarModel?.stats || {
+        weight: 1200,
+        power: 200,
+        topSpeed: 200,
+        acceleration: 7
+    };
+
+    // Apply bonuses to stats (weight not affected by special bonus)
+    const applyBonus = (value, includeSpecial = true) => {
+        const numVal = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
+        const bonusMultiplier = includeSpecial ? (100 + totalBonus) / 100 : (100 + regularBonus) / 100;
+        return Math.round(numVal * bonusMultiplier);
+    };
+
+    const stats = {
+        power: applyBonus(baseStats.power) + ' HP',
+        topSpeed: applyBonus(baseStats.topSpeed) + ' km/h',
+        acceleration: (parseFloat(String(baseStats.acceleration).replace(/[^0-9.]/g, '')) / ((100 + totalBonus) / 100)).toFixed(1) + 's',
+        weight: baseStats.weight // Weight stays the same for special items
     };
 
     return (

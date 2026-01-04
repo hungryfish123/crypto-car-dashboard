@@ -76,6 +76,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                 hourlyEarnings={hourlyEarnings}
                 onRewardsClaimed={onRewardsClaimed}
                 currentCarModel={currentCarModel}
+                equippedParts={equippedParts}
             />
             <motion.div
                 initial={{ x: 400, opacity: 0 }}
@@ -105,7 +106,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
 
                             return (
                                 <div key={item.id} onClick={() => setActivePage('Marketplace')} onMouseEnter={playHover}
-                                    className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all duration-200 hover:scale-105 group`}>
+                                    className={`h-36 bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all duration-200 hover:scale-105 group`}>
 
                                     {/* Rarity Label (Top Right) */}
                                     <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
