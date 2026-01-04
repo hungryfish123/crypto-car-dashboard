@@ -83,3 +83,47 @@ export const fetchHolderCount = async (ca) => {
     if (!ca) return 0;
     return Math.floor(Math.random() * 5000) + 100;
 };
+
+/**
+ * Reconstructs a simple chart history based on DexScreener price change intervals (5m, 1h, 6h, 24h)
+ * This avoids needing a paid history API while visualising the trend.
+ * @param {string} ca 
+ */
+export const fetchTokenChartData = async (ca) => {
+    try {
+        const response = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${ca}`);
+        if (!response.ok) return null;
+
+        const json = await response.json();
+        const pair = json.pairs?.[0];
+
+        if (!pair) return null;
+
+        const currentPrice = parseFloat(pair.priceUsd);
+        const changes = pair.priceChange || {};
+
+        // Helper to calculate past price: current / (1 + (change% / 100))
+        const getPastPrice = (changePercent) => {
+            if (!changePercent) return currentPrice;
+            return currentPrice / (1 + (changePercent / 100));
+        };
+
+        // Construct 5 data points: -24h, -6h, -1h, -5m, Now
+        const points = [
+            { time: '24h', price: getPastPrice(changes.h24) },
+            { time: '6h', price: getPastPrice(changes.h6) },
+            { time: '1h', price: getPastPrice(changes.h1) },
+            { time: '5m', price: getPastPrice(changes.m5) },
+            { time: 'Now', price: currentPrice }
+        ];
+
+        return {
+            points,
+            isPositive: (changes.h24 || 0) >= 0,
+            percentChange24h: changes.h24 || 0
+        };
+    } catch (err) {
+        console.warn('[TokenService] Chart data error:', err);
+        return null;
+    }
+};

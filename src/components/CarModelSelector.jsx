@@ -16,7 +16,13 @@ const CAR_MODELS = [
         price: 0, // 0 = free/starter car
         defaultOwned: true,
         targetNames: ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'],
-        autoScale: false
+        autoScale: false,
+        stats: {
+            weight: '1,200 kg',
+            power: '195 HP',
+            topSpeed: '235 km/h',
+            acceleration: '6.7s'
+        }
     },
     {
         id: 'vw_golf_gti_mk2',
@@ -27,10 +33,31 @@ const CAR_MODELS = [
         defaultOwned: false,
         targetNames: [
             'car_volkswagen_golfgtimk2_1992_Mesh:M_Paint_Metal_High_carpaint_0',
-            'car_volkswagen_golfgtimk2_1992_Mesh_M_Paint_Metal_High_carpaint_0', // Colon -> Underscore
-            'car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'   // Colon removed
+            'car_volkswagen_golfgtimk2_1992_Mesh_M_Paint_Metal_High_carpaint_0',
+            'car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'
         ],
-        autoScale: false
+        autoScale: false,
+        stats: {
+            weight: '920 kg',
+            power: '139 HP',
+            topSpeed: '208 km/h',
+            acceleration: '8.5s'
+        }
+    },
+    {
+        id: 'mazda_mx5_1989',
+        name: 'Mazda MX-5',
+        subtitle: '1989',
+        model: '/1989_mazda_mx-5.glb',
+        price: 1500,
+        defaultOwned: false,
+        autoScale: false,
+        stats: {
+            weight: '950 kg',
+            power: '116 HP',
+            topSpeed: '195 km/h',
+            acceleration: '8.8s'
+        }
     },
     {
         id: 'audi_sport_quattro_1984',
@@ -40,16 +67,13 @@ const CAR_MODELS = [
         price: 2500,
         defaultOwned: false,
         targetNames: ['Object_8', 'Object_11', 'Object_110', 'Object_128', 'Object_539'],
-        autoScale: false
-    },
-    {
-        id: 'mazda_mx5_1989',
-        name: 'Mazda MX-5',
-        subtitle: '1989',
-        model: '/1989_mazda_mx-5.glb',
-        price: 1500,
-        defaultOwned: false,
-        autoScale: false
+        autoScale: false,
+        stats: {
+            weight: '1,300 kg',
+            power: '306 HP',
+            topSpeed: '250 km/h',
+            acceleration: '4.8s'
+        }
     },
     {
         id: 'ferrari_f40_1987',
@@ -58,7 +82,13 @@ const CAR_MODELS = [
         model: '/1987_ferrari_f40.glb',
         price: 5000,
         defaultOwned: false,
-        autoScale: false
+        autoScale: false,
+        stats: {
+            weight: '1,100 kg',
+            power: '471 HP',
+            topSpeed: '324 km/h',
+            acceleration: '4.1s'
+        }
     },
 ];
 

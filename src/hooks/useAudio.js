@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 
 // Sound configurations
 const SOUNDS_CONFIG = {
-    bgm: { src: ['/sounds/background.mp3'], volume: 0.5, loop: true },
+    bgm: { src: ['/sounds/background.mp3'], volume: 0.2, loop: true },
     engine: { src: ['/sounds/carengine.mp3'], volume: 0.8 },
     ratchet: { src: ['/sounds/ratchet.mp3'], volume: 0.7 },
     colorSuccess: { src: ['/sounds/colorchange.mp3'], volume: 0.6 },

@@ -25,6 +25,7 @@ const DEFAULT_USER_DATA = {
     net_worth: 0,
     referral_code: null,
     referral_earnings: 0,
+    pending_rewards: 0,
     referred_by: null // Who referred this user
 };
 
@@ -62,12 +63,11 @@ export const fetchUserData = async (walletAddress, referredByCode = null) => {
 
         if (error && error.code !== 'PGRST116') { // PGRST116 is 'Row not found'
             console.error('Error fetching user data:', error);
-            return { wallet_id: walletAddress, ...DEFAULT_USER_DATA, referral_code: generateReferralCode() };
+            return { wallet_id: walletAddress, ...DEFAULT_USER_DATA, referral_code: null };
         }
 
-        // If user doesn't exist, create them
+        // If user doesn't exist, create them (referral_code will be set when username is chosen)
         if (!data) {
-            const newReferralCode = generateReferralCode();
             // Handle referral association if a code was provided
             let referredByWallet = null;
             if (referredByCode) {
@@ -85,7 +85,7 @@ export const fetchUserData = async (walletAddress, referredByCode = null) => {
                     {
                         wallet_id: walletAddress,
                         ...DEFAULT_USER_DATA,
-                        referral_code: newReferralCode,
+                        referral_code: null, // Will be set when username is chosen
                         referred_by: referredByWallet
                     }
                 ])
@@ -95,7 +95,7 @@ export const fetchUserData = async (walletAddress, referredByCode = null) => {
             if (insertError) {
                 console.error('[DB] Error creating new user:', insertError);
                 // Fallback to local data
-                return { wallet_id: walletAddress, ...DEFAULT_USER_DATA, referral_code: newReferralCode, referred_by: referredByWallet };
+                return { wallet_id: walletAddress, ...DEFAULT_USER_DATA, referral_code: null, referred_by: referredByWallet };
             }
             console.log('[DB] New user created successfully!' + (referredByWallet ? ` Referred by: ${referredByWallet}` : ''));
             return newData;
@@ -131,7 +131,7 @@ export const saveUserData = async (walletAddress, gameState) => {
             .update({
                 car_color: gameState.carColor,
                 inventory: gameState.inventory,
-                equipped_parts: gameState.equippedParts,
+                equipped_parts: gameState.equipped_parts, // Fixed: was equippedParts
                 cash: gameState.cash,
                 net_worth: gameState.netWorth
             })
@@ -169,6 +169,67 @@ export const getReferralHistory = async (walletAddress) => {
 };
 
 // =========================================
-// Burned Transactions Functions (REMOVED)
+// Profile System Functions (Using player_data)
 // =========================================
 
+export const getProfile = async (walletAddress) => {
+    if (!isSupabaseConfigured || !supabase) return null;
+    try {
+        const { data, error } = await supabase
+            .from('player_data')
+            .select('username')
+            .eq('wallet_id', walletAddress)
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            // If column doesn't exist yet (migration pending), it might throw. 
+            // But we assume migration is done.
+            console.error('Error fetching profile:', error);
+        }
+
+        if (data && data.username) return { username: data.username, user_wallet: walletAddress };
+        return null;
+    } catch (err) {
+        console.error('Unexpected error fetching profile:', err);
+        return null;
+    }
+};
+
+export const createProfile = async (walletAddress, username) => {
+    if (!isSupabaseConfigured || !supabase) return null;
+    try {
+        // First try to update existing player_data
+        // We act as "update" because fetchUserData normally creates the row on login.
+        // Username becomes the referral code!
+        const { data, error } = await supabase
+            .from('player_data')
+            .update({ username: username, referral_code: username.toUpperCase() })
+            .eq('wallet_id', walletAddress)
+            .select()
+            .single();
+
+        // If update returned no data (row missing), insert new with defaults
+        if (!data && (!error || error.code === 'PGRST116')) {
+            console.log('[DB] User missing in player_data, inserting new...');
+            const { data: newData, error: insertError } = await supabase
+                .from('player_data')
+                .insert([{
+                    wallet_id: walletAddress,
+                    username: username,
+                    ...DEFAULT_USER_DATA,
+                    referral_code: username.toUpperCase() // Username = Referral Code
+                }])
+                .select()
+                .single();
+
+            if (insertError) throw insertError;
+            return newData; // Returns full row
+        }
+
+        if (error) throw error;
+        return data; // Returns full row
+    } catch (err) {
+        console.error('Error saving username to player_data:', err);
+        throw err;
+    }
+};

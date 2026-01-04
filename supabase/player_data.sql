@@ -10,6 +10,8 @@ CREATE TABLE player_data (
     equipped_parts JSONB DEFAULT '{}'::jsonb,
     cash NUMERIC DEFAULT 50000,
     net_worth NUMERIC DEFAULT 0,
+    username TEXT CHECK (char_length(username) <= 12),
+    avatar_url TEXT,
     referral_code TEXT UNIQUE,
     referral_earnings NUMERIC DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),

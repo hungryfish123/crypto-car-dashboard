@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Package, X } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
 import SolanaPanel from './SolanaPanel';
+import InteractiveLogo from './InteractiveLogo';
+import { supabase } from '../supabaseClient';
+import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem }) => {
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, earnings, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel }) => {
     const { playHover } = useAudio();
 
     const getRarityStyles = (level) => {
@@ -19,53 +22,124 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
         }
     };
 
-    const marketWatch = [
-        { id: 'special_nitro', title: 'Nitro Boost System', price: '100,000 CR', image: '/nitro boost.png', rarityLevel: 7 },
-        { id: 'special_brakes', title: 'Ceramic Brembo Brakes', price: '35,000 CR', image: '/ceramic breaks.png', rarityLevel: 6 },
-    ];
+    const [modItems, setModItems] = useState([]);
+
+    useEffect(() => {
+        const fetchVisibleItems = async () => {
+            const { data: mappings } = await supabase.from('item_mappings').select('*');
+            const hiddenIds = mappings ? mappings.filter(m => m.hidden).map(m => m.item_id) : [];
+
+            // Filter all marketplace items that are NOT hidden
+            const visibleItems = MARKETPLACE_ITEMS.filter(item => !hiddenIds.includes(item.id));
+
+            // Prefer showing 'Special' mods first, or just take the last few
+            const specials = visibleItems.filter(item => item.category === 'Special');
+            const displayItems = specials.length >= 2 ? specials.slice(-2) : visibleItems.slice(-2);
+
+            setModItems(displayItems);
+        };
+
+        fetchVisibleItems();
+    }, []);
 
     return (
         <>
-            <SolanaPanel />
+            {/* Logo + X Icon */}
+            <div className="fixed left-8 top-6 z-40 flex items-center gap-4">
+                <InteractiveLogo />
+
+                {/* X Logo with hover effect */}
+                <a
+                    href="https://x.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative group cursor-pointer h-7 w-7"
+                >
+                    {/* White X Logo (default) */}
+                    <img
+                        src="/x-logo-white.png"
+                        alt="Follow us on X"
+                        className="h-full w-full object-contain absolute top-0 left-0 transition-opacity duration-200 group-hover:opacity-0"
+                    />
+                    {/* Red X Logo (hover) */}
+                    <img
+                        src="/x-logo-red.png"
+                        alt="Follow us on X"
+                        className="h-full w-full object-contain absolute top-0 left-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                    />
+                </a>
+            </div>
+
+            <SolanaPanel
+                earnings={earnings}
+                pendingRewards={pendingRewards}
+                hourlyEarnings={hourlyEarnings}
+                onRewardsClaimed={onRewardsClaimed}
+                currentCarModel={currentCarModel}
+            />
             <motion.div
                 initial={{ x: 400, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.2 }}
-                className="fixed right-8 top-24 bottom-32 w-[450px] bg-black/50 backdrop-blur-md border-l border-white/10 rounded-2xl z-30 flex flex-col overflow-hidden"
+                className="fixed right-8 top-24 bottom-32 w-[450px] bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl z-30 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
             >
-                <div className="p-4 border-b border-white/10 max-h-[120px]">
-                    <h3 className="text-red-500 text-xs font-bold tracking-[0.2em] mb-3 flex items-center gap-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                        <Zap size={14} className="text-red-500" />
-                        MARKET WATCH
+                <div className="p-4 py-5">
+                    <h3 className="text-red-500 text-base font-bold tracking-[0.2em] mb-4 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        NEW MODS
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        {marketWatch.map((item) => (
-                            <div key={item.id} onClick={() => setActivePage('Marketplace')} onMouseEnter={playHover}
-                                className="flex items-center gap-2 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-red-500/30 hover:bg-white/10 transition-all cursor-pointer group">
-                                <div className="w-12 h-12 rounded-lg bg-black/40 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                    <img src={item.image} alt={item.title} className="w-full h-full object-contain" onError={(e) => e.target.style.display = 'none'} />
+                    <div className="grid grid-cols-2 gap-4">
+                        {modItems.map((item) => {
+                            const rarityLabels = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'LEGENDARY', 'GOD TIER'];
+                            const rarityLabel = rarityLabels[Math.min(item.rarityLevel - 1, 6)] || 'COMMON';
+                            const getRarityBorder = (level) => {
+                                switch (level) {
+                                    case 1: return 'border-white/10 hover:border-gray-400';
+                                    case 2: return 'border-green-500/20 hover:border-green-500';
+                                    case 3: return 'border-blue-500/20 hover:border-blue-500';
+                                    case 4: return 'border-purple-500/20 hover:border-purple-500';
+                                    case 5: return 'border-yellow-500/20 hover:border-yellow-500';
+                                    case 6: case 7: return 'border-red-500/20 hover:border-red-500';
+                                    default: return 'border-white/10 hover:border-white/30';
+                                }
+                            };
+
+                            return (
+                                <div key={item.id} onClick={() => setActivePage('Marketplace')} onMouseEnter={playHover}
+                                    className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all duration-200 hover:scale-105 group`}>
+
+                                    {/* Rarity Label (Top Right) */}
+                                    <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
+
+                                    <div className="h-[75%] w-full flex items-center justify-center p-1">
+                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain drop-shadow-md p-1 transition-transform duration-200 group-hover:scale-110 pointer-events-none" onError={(e) => e.target.style.display = 'none'} />
+                                    </div>
+
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[35%]">
+                                        <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight group-hover:text-red-400 transition-colors" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
+                                        <div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.price} - {item.cashback} Yield</div>
+                                    </div>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="text-white text-[10px] font-bold truncate group-hover:text-red-400 transition-colors uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.title}</h4>
-                                    <p className="text-green-400 text-[10px] font-bold" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.price}</p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
-                <div className="flex-1 overflow-hidden flex flex-col">
-                    <h3 className="px-4 pt-4 text-red-500 text-xs font-bold tracking-[0.2em] mb-2 flex items-center gap-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                        <Package size={14} className="text-red-500" />
+
+                {/* Shortened centered divider */}
+                <div className="h-px w-[85%] mx-auto bg-white/10 shrink-0"></div>
+
+                <div className="flex-1 overflow-hidden flex flex-col relative">
+                    <h3 className="px-4 pt-4 text-red-500 text-base font-bold tracking-[0.2em] mb-4 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                         MY INVENTORY ({inventory.length})
                     </h3>
-                    {inventory.length === 0 ? (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center">
-                            <Package size={48} className="text-gray-700 mb-4" />
-                            <p className="text-gray-500 text-sm uppercase font-bold tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Garage Empty</p>
-                            <button onClick={() => setActivePage('Marketplace')} className="mt-4 px-6 py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-lg transition-colors" style={{ fontFamily: 'Rajdhani, sans-serif' }}>Visit Marketplace</button>
-                        </div>
-                    ) : (
-                        <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'none' }}>
+
+                    {/* Inventory List - Wraps in a container that leaves space for the bottom button */}
+                    <div className="flex-1 flex flex-col p-4 pb-20 scrollbar-hide">
+                        {inventory.length === 0 ? (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">
+                                <Package size={64} strokeWidth={1.5} className="text-gray-500 mb-6" />
+                                <p className="text-gray-400 text-base uppercase font-bold tracking-[0.3em]" style={{ fontFamily: 'Orbitron, sans-serif' }}>Garage Empty</p>
+                            </div>
+                        ) : (
                             <div className="grid grid-cols-2 gap-4">
                                 {inventory.map((item) => {
                                     // Check if item is currently equipped on THIS car
@@ -117,15 +191,26 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                             </div>
 
                                             <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[35%]">
-                                                <h4 className={`text-white text-sm font-bold uppercase text-center truncate w-full leading-tight ${isEquipped ? 'text-red-400' : ''}`} style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.title}</h4>
-                                                {item.cashback && (<div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{item.cashback} Yield</div>)}
+                                                <h4 className={`text-white text-sm font-bold uppercase text-center truncate w-full leading-tight ${isEquipped ? 'text-red-400' : ''}`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
+                                                {item.cashback && (<div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.cashback} Yield</div>)}
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+                    {/* Fixed 'Visit Marketplace' Button Overlay */}
+                    <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/90 to-transparent pt-12 pointer-events-none flex justify-center z-10">
+                        <button
+                            onClick={() => setActivePage('Marketplace')}
+                            className="w-full py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-lg transition-all shadow-lg hover:shadow-red-900/50 pointer-events-auto"
+                            style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                            Visit Marketplace
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </>

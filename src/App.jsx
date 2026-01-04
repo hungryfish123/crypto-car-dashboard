@@ -19,6 +19,11 @@ import CarCallouts from './components/CarCallouts';
 import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
 import AccessGate from './components/AccessGate';
 import AdminPanel from './components/AdminPanel'; // Admin Panel Import
+import Leaderboard from './components/Leaderboard';
+import UsernameModal from './components/UsernameModal';
+import { getProfile } from './dbServices';
+import { supabase } from './supabaseClient';
+import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
 
 
 // Preload the models
@@ -27,115 +32,6 @@ useGLTF.preload('/1992_volkswagen_golf_gti_mk2.glb');
 useGLTF.preload('/1984_audi_sport_quattro.glb');
 useGLTF.preload('/1989_mazda_mx-5.glb');
 useGLTF.preload('/1987_ferrari_f40.glb');
-
-// Concrete Floor Component with texture (smooth fade like Grid)
-function ConcreteFloor() {
-  const texture = useTexture('/backgrounds/189_concrete bare PBR texture-seamless.jpg');
-  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-
-  return (
-    <group>
-      {/* Main textured floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial map={texture} roughness={0.9} metalness={0.1} />
-      </mesh>
-      {/* Gradient fade rings - innermost to outermost */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[12, 18, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.15} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[18, 22, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[22, 26, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.55} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[26, 30, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.75} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[30, 100, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.95} />
-      </mesh>
-    </group>
-  );
-}
-
-// Damaged Concrete Floor Component (smooth fade)
-function DamagedConcreteFloor() {
-  const texture = useTexture('/backgrounds/69_concrete bare damaged texture-seamless.jpg');
-  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-
-  return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial map={texture} roughness={0.95} metalness={0.05} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[12, 18, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.15} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[18, 22, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[22, 26, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.55} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[26, 30, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.75} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[30, 100, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.95} />
-      </mesh>
-    </group>
-  );
-}
-
-// Custom Floor Component (smooth fade)
-function CustomFloor() {
-  const texture = useTexture('/backgrounds/Untitled-5.jpg');
-  texture.wrapS = texture.wrapT = THREE.ClampToEdgeWrapping;
-
-  return (
-    <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]} receiveShadow>
-        <planeGeometry args={[60, 60]} />
-        <meshStandardMaterial map={texture} roughness={0.85} metalness={0.15} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[12, 18, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.15} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[18, 22, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.35} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[22, 26, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.55} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[26, 30, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.75} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.99, 0]}>
-        <ringGeometry args={[30, 100, 64]} />
-        <meshBasicMaterial color="#000000" transparent opacity={0.95} />
-      </mesh>
-    </group>
-  );
-}
-
-
 
 
 function IntroCamera() {
@@ -152,7 +48,7 @@ function IntroCamera() {
       // Simple LERP approach:
       // Note: This is a continuous lerp towards target, which creates an ease-out effect.
       // Camera at Z=12.5 for a wider default view
-      camera.position.lerp(vec.set(0, 1.5, 12.5), 0.05);
+      camera.position.lerp(vec.set(0, 0, 12.5), 0.05);
       camera.lookAt(0, 0, 0);
     }
   });
@@ -168,7 +64,7 @@ function PendulumControls({ activePage }) {
   const idleDelay = 2000; // 2 seconds delay before resuming
 
   // Target X offset based on active page (camera follows car position)
-  const targetXOffset = activePage === 'Paint Shop' ? 4.5 : 0;
+  const targetXOffset = activePage === 'Paint Shop' ? 5 : 0;
   const currentXOffset = useRef(0);
 
   // Azimuth limits (0 to PI/2 = front to right side)
@@ -246,7 +142,41 @@ function PendulumControls({ activePage }) {
   );
 }
 
-function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30' }) {
+// Dynamic Grid Component
+function DynamicGrid({ carColor, specialEffect, ...props }) {
+  const gridRef = useRef();
+
+  useFrame((state) => {
+    if (gridRef.current && specialEffect === 'rainbow') {
+      const time = state.clock.elapsedTime;
+      const hue = (time * 0.1) % 1; // Slower cycle for grid background
+      // We can't easily animate internal shader uniforms of Drei Grid without knowing them.
+      // However, we can cycle the cellColor/sectionColor props via a small ref logic if needed, 
+      // but updating props triggers React render. 
+      // For a simple effect, we'll try to rely on re-renders for the grid since it's just one object, 
+      // OR we accept that the grid stays static rainbow.
+      // User requested: "turns the car to rainbow colors and also applies that rainbow effect globally".
+      // Let's try to animate the cellColor PROPS by using state in a parent? No, too slow.
+      // Actually, to make it performant:
+      // The Drei Grid creates a mesh with a shader material.
+      // We can try to assume standard uniforms like 'cellColor' exist.
+      // Let's access the material.
+      const material = gridRef.current.material;
+      if (material && material.uniforms && material.uniforms.cellColor) {
+        material.uniforms.cellColor.value.setHSL(hue, 1, 0.5);
+        material.uniforms.sectionColor.value.setHSL((hue + 0.5) % 1, 1, 0.3);
+      }
+    }
+  });
+
+  // Fallback: If specialEffect is on, we initiate with a base color, but useFrame handles animation.
+  // If OFF, we pass standard colors.
+  const activeCellColor = specialEffect === 'rainbow' ? '#ff0000' : (carColor === '#000000' || carColor === '#333333' ? '#444444' : carColor);
+
+  return <Grid ref={gridRef} cellColor={activeCellColor} sectionColor={specialEffect === 'rainbow' ? '#00ff00' : '#666666'} {...props} />;
+}
+
+function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30', specialEffect = null }) {
   const { scene } = useGLTF(modelPath);
   const meshRef = useRef();
   const transformGroupRef = useRef();
@@ -276,6 +206,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
   }, [modelPath]);
 
   const transitionScale = useRef(1);
+  const activeEffectRef = useRef(null); // Track active effect for cleanup
 
   // Robust Bounding Box Normalization - Scale matches models to TARGET_LENGTH
   const TARGET_LENGTH = 10.5;
@@ -412,17 +343,31 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
           const material = Array.isArray(child.material) ? child.material[0] : child.material;
 
           if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
-            material.color.set(color);
+            // Only apply standard color if NO special effect is active, or if this call is restoring state
+            if (!specialEffect) {
+              material.color.set(color);
 
+              // CRITICAL: Force emissive OFF to prevent glow effect on bright colors
+              material.emissive.set('#000000');
+              material.emissiveIntensity = 0;
+            }
+
+            // Clamp environment map intensity to prevent over-brightening
+            material.envMapIntensity = 1.0;
+
+            // Apply finish-specific material properties
             if (finish === 'glossy') {
-              material.metalness = 0.1;
-              material.roughness = 0.2;
+              material.metalness = 0.15;
+              material.roughness = 0.15;
             } else if (finish === 'matte') {
               material.metalness = 0.0;
-              material.roughness = 0.8;
+              material.roughness = 0.85;
             } else if (finish === 'metallic') {
-              material.metalness = 0.9;
-              material.roughness = 0.3;
+              material.metalness = 0.6;
+              material.roughness = 0.25;
+            } else if (finish === 'chrome') {
+              material.metalness = 1.0;
+              material.roughness = 0.0;
             }
             material.needsUpdate = true;
           }
@@ -438,7 +383,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
       }
     });
 
-  }, [scene, isOwned, effectiveTargetNames]);
+  }, [scene, isOwned, effectiveTargetNames, specialEffect]);
 
   // Flash Effect logic - triggered by counter change
   // Flash Effect logic - triggered by counter change (Standard flash)
@@ -516,6 +461,27 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
     if (meshRef.current) {
       // Rotation
       meshRef.current.rotation.y += rotationSpeed;
+
+      // Special Effect Logic
+      if (specialEffect && scene && isOwned && revealState.current === 'idle') {
+        const time = state.clock.elapsedTime;
+        scene.traverse((child) => {
+          if (child.isMesh && child.material && effectiveTargetNames.includes(child.name)) {
+
+            // Rainbow Rush
+            if (specialEffect === 'rainbow') {
+              const hue = (time * 0.5) % 1; // Cycle hue every 2 seconds
+              child.material.color.setHSL(hue, 1, 0.5);
+              child.material.emissive.setHSL(hue, 1, 0.2); // Slight emissive for pop
+              child.material.emissiveIntensity = 0.5;
+            }
+          }
+        });
+      } else if (!specialEffect && activeEffectRef.current) {
+        // Effect was just turned off, restore static style immediately
+        applyCarStyle(carColor, carFinish);
+      }
+      activeEffectRef.current = specialEffect;
 
       // Base X position for page transitions (Paint Shop offset)
       const baseX = activePage === 'Paint Shop' ? 4.5 : 0;
@@ -657,12 +623,7 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// Shared Marketplace Items
-import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
-
-// Placeholder for MARKETPLACE_ITEMS as it's not defined globally in the original code
-// In a real application, this would be imported from a data file or fetched.
-// const MARKETPLACE_ITEMS = [];
+// MARKETPLACE_ITEMS already imported at top of file
 
 function App() {
   const { user, authenticated } = usePrivy();
@@ -672,6 +633,8 @@ function App() {
   const [sceneBackground, setSceneBackground] = useState('grid'); // Default floor type
   const [rotationSpeed, setRotationSpeed] = useState(0.00);
   const [earningRate, setEarningRate] = useState(0.00001);
+
+  const [specialEffect, setSpecialEffect] = useState(null); // 'rainbow', 'galaxy', or null
 
   // Car model selection
   const [currentCarModelIndex, setCurrentCarModelIndex] = useState(0);
@@ -693,6 +656,45 @@ function App() {
     }
   });
   const [showAdmin, setShowAdmin] = useState(false); // Admin Panel State
+
+  // Rainbow Unlock State - Persistence per wallet
+  const [rainbowUnlocked, setRainbowUnlocked] = useState(false);
+
+  useEffect(() => {
+    const storageKey = user?.wallet?.address ? `rainbow_unlocked_${user.wallet.address}` : 'rainbow_unlocked_guest';
+    try {
+      const stored = localStorage.getItem(storageKey);
+      setRainbowUnlocked(stored === 'true');
+    } catch (e) {
+      console.warn("Failed to read rainbow state", e);
+    }
+  }, [user?.wallet?.address]);
+
+  const handleUnlockRainbow = () => {
+    setRainbowUnlocked(true);
+    const storageKey = user?.wallet?.address ? `rainbow_unlocked_${user.wallet.address}` : 'rainbow_unlocked_guest';
+    try {
+      localStorage.setItem(storageKey, 'true');
+    } catch (e) {
+      console.error("Failed to save rainbow state", e);
+    }
+  };
+
+  // Profile Onboarding State
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+
+  useEffect(() => {
+    const checkProfile = async () => {
+      if (authenticated && user?.wallet?.address) {
+        const profile = await getProfile(user.wallet.address);
+        if (!profile) {
+          setShowUsernameModal(true);
+        }
+      }
+    };
+    checkProfile();
+  }, [authenticated, user?.wallet?.address]);
+
 
   // Auto-bypass gate if wallet is connected
   useEffect(() => {
@@ -839,10 +841,27 @@ function App() {
   // Referral Code State
   const [referralCode, setReferralCode] = useState('');
 
+  // Username and Avatar State (from player_data)
+  const [username, setUsername] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+
+  // Pending Rewards State (for Treasury Payout)
+  const [pendingRewards, setPendingRewards] = useState(0);
+
+  // Total Earned (Referral Earnings)
+  const [referralEarnings, setReferralEarnings] = useState(0);
+
   // Function to equip an item (triggered by drag & drop)
   // Enforces "Unique Item" rule: Item can only be on one car at a time
   const equipItem = (item) => {
     if (!item || !item.category) return;
+
+    // Prevent equipping on locked/unowned cars
+    if (!isCurrentCarOwned) {
+      console.log('[Equip] Cannot equip on locked car');
+      return;
+    }
+
     const currentCarId = currentCarModel.id;
 
     setEquippedPartsByCar(prev => {
@@ -1004,7 +1023,105 @@ function App() {
             console.log('Cleared pending referral:', pendingReferral);
           }
           setCarColor(data.car_color || '#FF0000');
-          setInventory(data.inventory || []);
+
+          // ==============================================
+          // WALLET SYNC: Check wallet for tokens matching item_mappings
+          // ==============================================
+          let mergedInventory = data.inventory || [];
+          try {
+            console.log('[WalletSync] Checking for on-chain tokens...');
+
+            // 1. Get all items with contract addresses from item_mappings
+            const { data: mappings, error: mappingsError } = await supabase
+              .from('item_mappings')
+              .select('item_id, contract_address')
+              .not('contract_address', 'is', null);
+
+            if (mappingsError) {
+              console.warn('[WalletSync] Mappings query error:', mappingsError);
+            } else if (mappings && mappings.length > 0) {
+              console.log('[WalletSync] Found mappings with CAs:', mappings);
+
+              // 2. Create a map of contract address -> item_id
+              const caToItemId = {};
+              mappings.forEach(m => {
+                if (m.contract_address) {
+                  caToItemId[m.contract_address.toLowerCase()] = m.item_id;
+                }
+              });
+
+              // 3. Fetch wallet SPL tokens using Moralis API
+              const moralisApiKey = import.meta.env.VITE_MORALIS_API_KEY;
+
+              if (!moralisApiKey) {
+                console.warn('[WalletSync] VITE_MORALIS_API_KEY not set in environment');
+              } else {
+                try {
+                  const moralisUrl = `https://solana-gateway.moralis.io/account/mainnet/${walletAddress}/tokens`;
+
+                  const response = await fetch(moralisUrl, {
+                    method: 'GET',
+                    headers: {
+                      'Accept': 'application/json',
+                      'X-API-Key': moralisApiKey
+                    }
+                  });
+
+                  if (!response.ok) {
+                    console.warn('[WalletSync] Moralis API returned:', response.status);
+                  } else {
+                    const tokens = await response.json();
+                    console.log('[WalletSync] Found', tokens.length, 'SPL tokens in wallet');
+
+                    // 4. Check each token against our mappings
+                    const existingIds = new Set(mergedInventory.map(item => item.id || item.item_id));
+
+                    for (const token of tokens) {
+                      const mint = token.mint?.toLowerCase();
+                      const balance = parseFloat(token.amount) || 0;
+
+                      // Check if this token matches any of our items
+                      if (mint && caToItemId[mint] && balance > 0) {
+                        const itemId = caToItemId[mint];
+
+                        if (!existingIds.has(itemId)) {
+                          console.log('[WalletSync] 🎉 Found matching token!', itemId, 'Balance:', balance);
+
+                          // Look up the actual marketplace item data
+                          const marketplaceItem = MARKETPLACE_ITEMS.find(item => item.id === itemId);
+
+                          // Add to inventory with real marketplace data
+                          mergedInventory.push({
+                            id: itemId,
+                            item_id: itemId,
+                            title: marketplaceItem?.title || itemId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+                            name: marketplaceItem?.title || itemId,
+                            rarity: marketplaceItem?.rarity || 'bg-gray-500',
+                            rarityLevel: marketplaceItem?.rarityLevel || 1,
+                            category: marketplaceItem?.category || 'Special',
+                            balance: balance,
+                            contract_address: mint,
+                            image: marketplaceItem?.image || '/level1.png',
+                            price: marketplaceItem?.price || '0 CR',
+                            isOnChain: true
+                          });
+                          existingIds.add(itemId);
+                        }
+                      }
+                    }
+                  }
+                } catch (moralisErr) {
+                  console.warn('[WalletSync] Moralis API call failed:', moralisErr);
+                }
+              }
+            } else {
+              console.log('[WalletSync] No item_mappings with contract addresses found');
+            }
+          } catch (syncErr) {
+            console.warn('[WalletSync] Failed to sync:', syncErr);
+          }
+
+          setInventory(mergedInventory);
 
           // Handle migration from old single-car format to new multi-car format
           const loadedParts = data.equipped_parts || {};
@@ -1023,6 +1140,12 @@ function App() {
           }
           setEarnings(Number(data.cash) || 50000);
           setReferralCode(data.referral_code || '');
+          setUsername(data.username || '');
+          setAvatarUrl(data.avatar_url || '');
+          const pending = Number(data.pending_rewards) || 0;
+          console.log('💰 [App] Loaded Pending Rewards:', pending);
+          setPendingRewards(pending);
+          setReferralEarnings(Number(data.referral_earnings) || 0);
         }
       }
     };
@@ -1105,16 +1228,16 @@ function App() {
 
   return (
     <div
-      className="h-screen w-screen bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-gray-900 via-black to-black relative overflow-hidden font-sans select-none text-white"
+      className="h-screen w-screen bg-black relative overflow-hidden font-sans select-none text-white"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
 
       {/* AudioControls & LoginButton - Top Right (Not on Marketplace) */}
-      {activePage !== 'Marketplace' && (
-        <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
+      {activePage !== 'Marketplace' && activePage !== 'Leaderboard' && (
+        <div className="absolute top-8 right-8 z-50 flex items-center gap-3">
           <AudioControls />
-          <LoginButton />
+          <LoginButton onProfileClick={() => setActivePage('Profile')} />
         </div>
       )}
 
@@ -1173,24 +1296,12 @@ function App() {
               equippedParts={equippedParts}
               inventory={inventory}
               carModelId={currentCarModel.id}
+              specialEffect={specialEffect}
             />
 
-            {/* Floor - switches based on sceneBackground */}
+            {/* Floors and Post processing */}
             {sceneBackground === 'grid' && (
-              <Grid
-                position={[0, -1, 0]}
-                args={[100, 100]}
-                cellSize={0.5}
-                cellThickness={0.5}
-                cellColor={carColor === '#000000' || carColor === '#333333' ? '#444444' : carColor}
-                sectionSize={3}
-                sectionThickness={1}
-                sectionColor={carColor === '#000000' || carColor === '#333333' ? '#666666' : carColor}
-                fadeDistance={30}
-                fadeStrength={1}
-                followCamera={false}
-                infiniteGrid={true}
-              />
+              <DynamicGrid position={[0, -1, 0]} args={[100, 100]} cellSize={0.5} cellThickness={0.5} sectionSize={3} sectionThickness={1} fadeDistance={30} fadeStrength={1} followCamera={false} infiniteGrid={true} carColor={carColor} specialEffect={specialEffect} />
             )}
             {sceneBackground === 'concrete' && (
               <ConcreteFloor />
@@ -1204,7 +1315,7 @@ function App() {
 
             {/* Post Processing */}
             <EffectComposer disableNormalPass>
-              <Bloom luminanceThreshold={1} intensity={1.5} mipmapBlur />
+              <Bloom luminanceThreshold={1.5} intensity={0.3} mipmapBlur />
             </EffectComposer>
 
             {/* Custom Pendulum Camera Controls */}
@@ -1218,16 +1329,30 @@ function App() {
       <AnimatePresence>
         {activePage === 'Garage' && (
           <GarageHUD
+            currentCarModel={currentCarModel}
             carColor={carColor}
             setActivePage={setActivePage}
             inventory={inventory}
-            equippedParts={equippedParts}
+            equippedParts={equippedPartsByCar[currentCarModel.id] || { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }}
             equipItem={equipItem}
             unequipItem={unequipItem}
             setDraggedItem={setDraggedItem}
             draggedItem={draggedItem}
-          />
-        )}
+            setSceneBackground={setSceneBackground}
+            // New Earnings Props
+            earnings={earnings}
+            pendingRewards={pendingRewards}
+            onRewardsClaimed={() => setPendingRewards(0)}
+            hourlyEarnings={
+              // Calculate total yield from all equipped parts on current car
+              Object.values(equippedPartsByCar[currentCarModel.id] || {}).reduce((total, part) => {
+                if (!part) return total;
+                // Extract number from string like "+0.005 SOL/h"
+                const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
+                return total + yieldVal;
+              }, 0).toFixed(4)
+            }
+          />)}
 
         {/* Admin Panel Overlay */}
         {showAdmin && (
@@ -1244,7 +1369,7 @@ function App() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="absolute inset-0 z-10 bg-black/80 backdrop-blur-sm"
           >
-            <Marketplace addToInventory={addToInventory} />
+            <Marketplace addToInventory={addToInventory} onProfileClick={() => setActivePage('Profile')} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1332,6 +1457,31 @@ function App() {
           setEnvironment={setEnvironment}
           sceneBackground={sceneBackground}
           setSceneBackground={setSceneBackground}
+          specialEffect={specialEffect}
+          setSpecialEffect={setSpecialEffect}
+          rainbowUnlocked={rainbowUnlocked}
+          onUnlockRainbow={handleUnlockRainbow}
+        />
+      )}
+
+      {/* Username Onboarding Modal */}
+      {showUsernameModal && (
+        <UsernameModal
+          walletAddress={user?.wallet?.address}
+          onComplete={(newUsername) => {
+            setShowUsernameModal(false);
+            // After username is set, update the referral code to match
+            setUsername(newUsername);
+            setReferralCode(newUsername.toUpperCase());
+          }}
+        />
+      )}
+
+      {/* Leaderboard Page */}
+      {activePage === 'Leaderboard' && (
+        <Leaderboard
+          onBack={() => setActivePage('Garage')}
+          onProfileClick={() => setActivePage('Profile')}
         />
       )}
 
@@ -1341,7 +1491,24 @@ function App() {
           inventory={inventory}
           equippedParts={equippedParts}
           earnings={earnings}
-          referralCode={referralCode} // Pass referral code
+          referralCode={referralCode}
+          pendingRewards={pendingRewards}
+          onRewardsClaimed={() => setPendingRewards(0)}
+          username={username}
+          avatarUrl={avatarUrl}
+          onAvatarUpdated={(url) => setAvatarUrl(url)}
+          hourlyEarnings={
+            Object.values(equippedParts || {}).reduce((total, part) => {
+              if (!part) return total;
+              const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
+              return total + yieldVal;
+            }, 0).toFixed(4)
+          }
+          totalEarned={activePage === 'Profile' ? referralEarnings : 0}
+          currentCarModel={currentCarModel}
+          carColor={carColor}
+          carFinish={carFinish}
+          ownedCars={ownedCars}
         />
       )}
 

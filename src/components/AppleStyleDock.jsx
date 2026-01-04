@@ -4,6 +4,7 @@ import {
     Palette,
     Package,
     Flag,
+    Trophy,
 } from 'lucide-react';
 
 import { Dock, DockIcon, DockItem, DockLabel } from './ui/dock';
@@ -35,6 +36,13 @@ const data = [
         title: 'Race',
         icon: (
             <Flag className='h-full w-full text-red-500' />
+        ),
+        href: '#',
+    },
+    {
+        title: 'Leaderboard',
+        icon: (
+            <Trophy className='h-full w-full text-red-500' />
         ),
         href: '#',
     },

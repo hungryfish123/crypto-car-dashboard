@@ -156,7 +156,7 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                 whileTap={{ scale: !isLoading ? 0.98 : 1 }}
                                 type="submit"
                                 disabled={isLoading}
-                                className={`mt-6 w-full group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-800 px-6 py-4 text-white font-bold tracking-wider transition-all hover:brightness-110 active:brightness-90 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                className={`mt-2 w-full group relative flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-red-600 to-red-800 px-6 py-4 text-white font-bold tracking-wider transition-all hover:brightness-110 active:brightness-90 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <span className="relative z-10 font-['Orbitron']">
                                     {isLoading ? 'VERIFYING...' : isUnlocked ? 'ACCESS GRANTED' : 'AUTHENTICATE'}
@@ -182,6 +182,20 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                 )}
                             </AnimatePresence>
                         </form>
+
+                        {/* Protected by Privy Logo */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.5 }}
+                            transition={{ delay: 0.6 }}
+                            className="flex justify-center mt-2"
+                        >
+                            <img
+                                src="/protected-privy-logo2.png"
+                                alt="Protected by Privy"
+                                className="h-6 w-auto object-contain"
+                            />
+                        </motion.div>
 
                         {/* Decorative Elements */}
                         <div className="absolute -top-4 -left-4 w-8 h-8 border-t-2 border-l-2 border-white/20 rounded-tl-lg" />
