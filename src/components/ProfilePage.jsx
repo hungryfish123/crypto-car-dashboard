@@ -244,24 +244,24 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                 {/* LEFT COLUMN: PROFILE SUMMARY */}
                 <motion.div
                     variants={itemVariants}
-                    className="col-span-1 h-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-8 flex flex-col relative overflow-hidden transition-colors"
+                    className="col-span-1 h-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden transition-colors"
                 >
                     {/* Top Section: Logo, Avatar & Name */}
-                    <div className="flex flex-col items-center text-center mt-2 mb-auto">
+                    <div className="flex flex-col items-center text-center">
                         {/* Interactive Gear Logo */}
-                        <div className="mb-4 scale-90">
+                        <div className="mb-3">
                             <InteractiveLogo />
                         </div>
 
-                        <div className="relative mb-4">
+                        <div className="relative mb-3">
                             <div
-                                className="w-40 h-40 rounded-full flex items-center justify-center border-4 border-white/10 relative z-10 cursor-pointer overflow-hidden group bg-black/50 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
+                                className="w-44 h-44 rounded-full flex items-center justify-center border-4 border-white/10 relative z-10 cursor-pointer overflow-hidden group bg-black/50 shadow-[0_0_40px_rgba(0,0,0,0.5)]"
                                 onClick={() => fileInputRef.current?.click()}
                             >
                                 {avatarUrl ? (
                                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
-                                    <User size={60} className="text-white/50" />
+                                    <User size={64} className="text-white/50" />
                                 )}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                     <Edit size={32} className="text-white" />
@@ -278,7 +278,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                         {avatarError && <div className="text-xs text-red-500 bg-red-500/10 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-4">{avatarError}</div>}
 
                         <div className="space-y-1">
-                            <h2 className="text-3xl font-bold text-white uppercase tracking-wider" style={orbitronFont}>
+                            <h2 className="text-4xl font-bold text-white uppercase tracking-wider" style={orbitronFont}>
                                 {isAuthenticated ? (username || 'Racer') : 'Anonymous'}
                             </h2>
                             <div className="flex items-center justify-center">
@@ -334,11 +334,11 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                         )}
                     </div>
 
-                    <div className="mt-4 space-y-2">
+                    <div className="space-y-3">
 
                         {/* REWARDS MODULE */}
-                        <div className="bg-black/80 rounded-xl p-4 border border-white/5 space-y-3">
-                            <h3 className="text-red-500 font-bold uppercase tracking-[0.2em] text-sm text-center" style={orbitronFont}>
+                        <div className="bg-black/80 rounded-xl p-5 border border-white/5 space-y-4">
+                            <h3 className="text-red-500 font-bold uppercase tracking-[0.2em] text-base text-center" style={orbitronFont}>
                                 REWARDS
                             </h3>
 
@@ -355,9 +355,9 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </div>
 
                             {/* Large Available Amount */}
-                            <div className="text-center py-1">
+                            <div className="text-center py-2">
                                 <div className="flex items-baseline justify-center gap-2">
-                                    <span className="text-4xl font-bold text-white" style={orbitronFont}>
+                                    <span className="text-5xl font-bold text-white" style={orbitronFont}>
                                         {pendingRewards > 0 ? pendingRewards.toFixed(4) : '0.0010'}
                                     </span>
                                     <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">SOL</span>
