@@ -11,8 +11,12 @@ body,
   width: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow-x: hidden;
   font-family: 'Rajdhani', sans-serif;
+}
+
+body {
+  overflow-y: auto;
 }
 
 /* Custom Range Slider Styling */

@@ -94,9 +94,15 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
     );
 
     return (
-        <div className="flex flex-col h-full w-full relative overflow-hidden">
+        <div className="absolute inset-0 z-20 flex flex-col h-full w-full overflow-hidden">
+            {/* Full-page Glassmorphism Backdrop */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
+
+            {/* Cyber-Grid Background Overlay - More visible red */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#dc262615_1px,transparent_1px),linear-gradient(to_bottom,#dc262615_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+
             {/* Header */}
-            <div className="flex items-center justify-between h-20 px-8 z-10 w-full bg-black/60 backdrop-blur-md border-b border-white/10 relative">
+            <div className="relative flex items-center justify-between h-20 px-8 z-10 w-full bg-black/70 backdrop-blur-xl border-b border-red-500/20">
                 {/* Left: Back + Logo */}
                 <div className="flex items-center gap-6">
                     <button
@@ -126,140 +132,146 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
                 </div>
             </div>
 
-            {/* Main Content - Wider container */}
-            <div className="flex-1 overflow-y-auto w-full max-w-6xl mx-auto custom-scrollbar px-8 py-8">
-                {/* Column Headers */}
-                <div className="grid grid-cols-12 gap-4 px-4 py-3 text-xs text-red-500 uppercase tracking-widest font-bold mb-4 border-b border-white/10" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    <div className="col-span-1">Rank</div>
-                    <div className="col-span-4">Player</div>
-                    <div className="col-span-2 text-center">Cars</div>
-                    <div className="col-span-2 text-center">Parts</div>
-                    <div className="col-span-3 text-right">Fees Earned</div>
-                </div>
+            {/* Main Content Container - With visible border */}
+            <div className="relative flex-1 flex justify-center px-8 py-6">
+                {/* Leaderboard Box with border */}
+                <div className="relative w-full max-w-5xl h-full bg-black/40 backdrop-blur-sm border border-red-500/30 rounded-xl overflow-hidden">
+                    {/* Scrollable Content Area */}
+                    <div className="h-full overflow-y-auto px-6 py-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-red-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+                        {/* Column Headers */}
+                        <div className="grid grid-cols-12 gap-4 px-4 py-3 text-xs text-red-500 uppercase tracking-widest font-bold mb-4 border-b border-red-500/20" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            <div className="col-span-1">Rank</div>
+                            <div className="col-span-4">Player</div>
+                            <div className="col-span-2 text-center">Cars</div>
+                            <div className="col-span-2 text-center">Parts</div>
+                            <div className="col-span-3 text-right">Fees Earned</div>
+                        </div>
 
-                {loading ? (
-                    <div className="space-y-3">
-                        {Array.from({ length: 10 }).map((_, i) => (
-                            <SkeletonRow key={i} />
-                        ))}
-                    </div>
-                ) : (
-                    <motion.div
-                        className="space-y-3"
-                        variants={containerVariants}
-                        initial="hidden"
-                        animate="show"
-                    >
-                        {(() => {
-                            const rows = [];
-                            const totalSlots = 20;
+                        {loading ? (
+                            <div className="space-y-3">
+                                {Array.from({ length: 10 }).map((_, i) => (
+                                    <SkeletonRow key={i} />
+                                ))}
+                            </div>
+                        ) : (
+                            <motion.div
+                                className="space-y-3"
+                                variants={containerVariants}
+                                initial="hidden"
+                                animate="show"
+                            >
+                                {(() => {
+                                    const rows = [];
+                                    const totalSlots = 20;
 
-                            // Real users
-                            leaderboard.forEach((player, index) => {
-                                const rank = index + 1;
-                                const isCurrentUser = currentWallet && player.user_wallet.toLowerCase() === currentWallet.toLowerCase();
-                                const displayName = player.username || shortenAddress(player.user_wallet);
-                                const feesEarned = parseFloat(player.fees_earned) || 0;
-                                const carsCount = player.cars_count || 1; // Default 1 (BMW starter)
-                                const partsCount = player.parts_count || 0;
+                                    // Real users
+                                    leaderboard.forEach((player, index) => {
+                                        const rank = index + 1;
+                                        const isCurrentUser = currentWallet && player.user_wallet.toLowerCase() === currentWallet.toLowerCase();
+                                        const displayName = player.username || shortenAddress(player.user_wallet);
+                                        const feesEarned = parseFloat(player.fees_earned) || 0;
+                                        const carsCount = player.cars_count || 1; // Default 1 (BMW starter)
+                                        const partsCount = player.parts_count || 0;
 
-                                rows.push(
-                                    <motion.div
-                                        key={player.user_wallet}
-                                        variants={rowVariants}
-                                        className={`grid grid-cols-12 gap-4 items-center p-4 rounded-xl border transition-all duration-300 
+                                        rows.push(
+                                            <motion.div
+                                                key={player.user_wallet}
+                                                variants={rowVariants}
+                                                className={`grid grid-cols-12 gap-4 items-center p-4 rounded-xl border transition-all duration-300 
                                             ${rank === 1 ? 'bg-red-500/10 border-red-500/30' :
-                                                rank <= 3 ? 'bg-gray-500/10 border-gray-500/30' :
-                                                    'bg-black/40 backdrop-blur-sm border-white/5'} 
+                                                        rank <= 3 ? 'bg-gray-500/10 border-gray-500/30' :
+                                                            'bg-black/40 backdrop-blur-sm border-white/5'} 
                                             ${isCurrentUser ? 'ring-2 ring-white/50' : ''} 
                                             hover:bg-white/5`}
-                                    >
-                                        {/* Rank */}
-                                        <div
-                                            className={`col-span-1 text-2xl font-bold ${rank === 1 ? 'text-red-500' :
-                                                rank <= 3 ? 'text-gray-400' :
-                                                    'text-gray-500'
-                                                }`}
-                                            style={{ fontFamily: 'Orbitron, sans-serif' }}
-                                        >
-                                            #{rank}
-                                        </div>
-
-                                        {/* Player with Avatar */}
-                                        <div className="col-span-4 flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                {player.avatar_url ? (
-                                                    <img
-                                                        src={player.avatar_url}
-                                                        alt={displayName}
-                                                        className="w-full h-full object-cover"
-                                                    />
-                                                ) : (
-                                                    <User size={20} className="text-gray-500" />
-                                                )}
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-white font-bold text-base uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                                        {displayName}
-                                                    </p>
-                                                    {/* X Profile Link - Inline with name */}
-                                                    {player.x_profile && (
-                                                        <a
-                                                            href={`https://x.com/${player.x_profile}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="hover:opacity-70 transition-opacity"
-                                                        >
-                                                            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                                            </svg>
-                                                        </a>
-                                                    )}
-                                                </div>
-                                                {isCurrentUser && (
-                                                    <span className="text-[10px] text-white uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>You</span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Cars Count */}
-                                        <div className="col-span-2 text-center">
-                                            <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                                {carsCount}
-                                            </span>
-                                        </div>
-
-                                        {/* Parts Count */}
-                                        <div className="col-span-2 text-center">
-                                            <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                                {partsCount}
-                                            </span>
-                                        </div>
-
-                                        {/* Fees Earned */}
-                                        <div className="col-span-3 text-right">
-                                            <p
-                                                className={`text-lg font-bold ${rank === 1 ? 'text-red-500' : 'text-white'}`}
-                                                style={{ fontFamily: 'Orbitron, sans-serif' }}
                                             >
-                                                {formatSol(feesEarned)} SOL
-                                            </p>
-                                        </div>
-                                    </motion.div>
-                                );
-                            });
+                                                {/* Rank */}
+                                                <div
+                                                    className={`col-span-1 text-2xl font-bold ${rank === 1 ? 'text-red-500' :
+                                                        rank <= 3 ? 'text-gray-400' :
+                                                            'text-gray-500'
+                                                        }`}
+                                                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                                                >
+                                                    #{rank}
+                                                </div>
 
-                            // Fill remaining slots with empty rows
-                            for (let i = leaderboard.length; i < totalSlots; i++) {
-                                rows.push(<EmptyRow key={`empty-${i}`} rank={i + 1} />);
-                            }
+                                                {/* Player with Avatar */}
+                                                <div className="col-span-4 flex items-center gap-3">
+                                                    <div className="w-12 h-12 rounded-full bg-gray-800 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                                        {player.avatar_url ? (
+                                                            <img
+                                                                src={player.avatar_url}
+                                                                alt={displayName}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <User size={20} className="text-gray-500" />
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-white font-bold text-base uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                                                {displayName}
+                                                            </p>
+                                                            {/* X Profile Link - Inline with name */}
+                                                            {player.x_profile && (
+                                                                <a
+                                                                    href={`https://x.com/${player.x_profile}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    className="hover:opacity-70 transition-opacity"
+                                                                >
+                                                                    <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                                                    </svg>
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                        {isCurrentUser && (
+                                                            <span className="text-[10px] text-white uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>You</span>
+                                                        )}
+                                                    </div>
+                                                </div>
 
-                            return rows;
-                        })()}
-                    </motion.div>
-                )}
+                                                {/* Cars Count */}
+                                                <div className="col-span-2 text-center">
+                                                    <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                                        {carsCount}
+                                                    </span>
+                                                </div>
+
+                                                {/* Parts Count */}
+                                                <div className="col-span-2 text-center">
+                                                    <span className="text-white font-bold text-lg" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                                        {partsCount}
+                                                    </span>
+                                                </div>
+
+                                                {/* Fees Earned */}
+                                                <div className="col-span-3 text-right">
+                                                    <p
+                                                        className={`text-lg font-bold ${rank === 1 ? 'text-red-500' : 'text-white'}`}
+                                                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                                                    >
+                                                        {formatSol(feesEarned)} SOL
+                                                    </p>
+                                                </div>
+                                            </motion.div>
+                                        );
+                                    });
+
+                                    // Fill remaining slots with empty rows
+                                    for (let i = leaderboard.length; i < totalSlots; i++) {
+                                        rows.push(<EmptyRow key={`empty-${i}`} rank={i + 1} />);
+                                    }
+
+                                    return rows;
+                                })()}
+                            </motion.div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

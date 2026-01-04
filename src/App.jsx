@@ -1252,8 +1252,8 @@ function App() {
         />
       )}
 
-      {/* 3D Scene Layer - Visible in Garage and Paint Shop */}
-      {(activePage === 'Garage' || activePage === 'Paint Shop') && (
+      {/* 3D Scene Layer - Visible in Garage, Paint Shop, and Leaderboard */}
+      {(activePage === 'Garage' || activePage === 'Paint Shop' || activePage === 'Leaderboard') && (
         <div
           className={`absolute inset-0 z-0 overflow-hidden ${draggedItem ? 'cursor-copy' : ''}`}
         >
