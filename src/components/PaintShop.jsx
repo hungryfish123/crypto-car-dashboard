@@ -202,7 +202,7 @@ export default function PaintShop({
             initial={{ x: -400, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed left-8 top-24 w-72 max-w-[300px] shrink-0 max-h-[85vh] h-fit bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex flex-col shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5"
+            className="fixed left-8 top-24 w-80 max-h-[85vh] h-fit bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex flex-col shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5"
         >
             {/* Header */}
             <div className="p-6 pb-2">

@@ -231,12 +231,12 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
     const orbitronFont = { fontFamily: 'Orbitron, sans-serif' };
 
     return (
-        <div className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm overflow-y-auto overflow-x-hidden flex flex-col items-center font-orbitron" style={orbitronFont}>
+        <div className="absolute inset-0 z-20 bg-black/90 backdrop-blur-sm overflow-hidden flex flex-col items-center justify-center font-orbitron" style={orbitronFont}>
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
             <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-red-600/5 blur-[150px] rounded-full pointer-events-none"></div>
 
             <motion.div
-                className="w-full h-full max-w-[1600px] p-8 pb-28 md:grid md:grid-cols-3 gap-6 flex flex-col overflow-y-auto md:overflow-hidden"
+                className="w-full h-full min-h-[100dvh] max-w-[1600px] p-8 pb-28 md:grid md:grid-cols-3 gap-6 flex flex-col overflow-y-auto md:overflow-hidden"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"

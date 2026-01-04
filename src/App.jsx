@@ -1228,7 +1228,7 @@ function App() {
 
   return (
     <div
-      className="h-screen w-screen bg-black relative overflow-hidden font-sans select-none text-white"
+      className="min-h-[100dvh] w-full bg-black text-white overflow-x-hidden flex flex-col relative font-sans select-none"
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >

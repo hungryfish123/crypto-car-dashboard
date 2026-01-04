@@ -81,7 +81,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                 initial={{ x: 400, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.2 }}
-                className="fixed right-8 top-24 bottom-32 w-80 max-w-[320px] shrink-0 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl z-30 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
+                className="fixed right-8 top-24 bottom-32 w-[450px] shrink-0 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl z-30 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
             >
                 <div className="p-4 py-5">
                     <h3 className="text-red-500 text-base font-bold tracking-[0.2em] mb-4 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
