@@ -81,7 +81,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                 initial={{ x: 400, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.2 }}
-                className="fixed right-8 top-24 bottom-32 w-[450px] shrink-0 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl z-30 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
+                className="fixed right-8 top-24 bottom-32 w-[450px] bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl z-30 flex flex-col overflow-hidden shadow-2xl shadow-black/50"
             >
                 <div className="p-4 py-5">
                     <h3 className="text-red-500 text-base font-bold tracking-[0.2em] mb-4 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
@@ -115,8 +115,8 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                     </div>
 
                                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[35%]">
-                                        <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight group-hover:text-red-400 transition-colors" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
-                                        <div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.price} - {item.cashback} Yield</div>
+                                        <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight transition-colors" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
+                                        <div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.cashback} Yield</div>
                                     </div>
                                 </div>
                             );
