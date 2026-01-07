@@ -348,5 +348,68 @@ export const MARKETPLACE_ITEMS = [
         marketCap: '$50.0M',
         cashback: '25.0%',
         rarityLevel: 7
+    },
+    // Cars (For Admin Management)
+    // Cars (For Admin Management)
+    // BMW Removed (Default Car)
+    {
+        id: 'vw_golf_gti_mk2',
+        title: 'VW Golf GTI Mk2',
+        description: 'The hot hatch benchmark. Practical speed.',
+        price: '10 Tokens',
+        numPrice: 10,
+        image: '/1992_volkswagen_golf_gti_mk2.glb',
+        category: 'Cars',
+        rarity: 'bg-green-500',
+        supply: 'Unlimited',
+        holders: 0,
+        marketCap: 'N/A',
+        cashback: '0%',
+        rarityLevel: 2
+    },
+    {
+        id: 'audi_sport_quattro',
+        title: 'Audi Sport Quattro',
+        description: 'Rally legend. Pure grip and acceleration.',
+        price: '10 Tokens',
+        numPrice: 10,
+        image: '/1984_audi_sport_quattro.glb',
+        category: 'Cars',
+        rarity: 'bg-blue-500',
+        supply: 'Unlimited',
+        holders: 0,
+        marketCap: 'N/A',
+        cashback: '0%',
+        rarityLevel: 3
+    },
+    {
+        id: 'mazda_mx5_na',
+        title: 'Mazda MX-5 NA',
+        description: 'Pure driving joy. Lightweight roadster.',
+        price: '10 Tokens',
+        numPrice: 10,
+        image: '/1989_mazda_mx-5.glb',
+        category: 'Cars',
+        rarity: 'bg-purple-500',
+        supply: 'Unlimited',
+        holders: 0,
+        marketCap: 'N/A',
+        cashback: '0%',
+        rarityLevel: 2
+    },
+    {
+        id: 'ferrari_f40',
+        title: 'Ferrari F40',
+        description: 'The last Ferrari approved by Enzo. No aids.',
+        price: '20 Tokens',
+        numPrice: 20,
+        image: '/1987_ferrari_f40.glb',
+        category: 'Cars',
+        rarity: 'bg-yellow-500',
+        supply: 'Unlimited',
+        holders: 0,
+        marketCap: 'N/A',
+        cashback: '0%',
+        rarityLevel: 5
     }
 ];

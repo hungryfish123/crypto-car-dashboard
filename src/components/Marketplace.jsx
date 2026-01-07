@@ -9,10 +9,17 @@ import { supabase } from '../supabaseClient';
 import { useTokenMetrics } from '../hooks/useTokenMetrics';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
-const Marketplace = ({ addToInventory, onProfileClick }) => {
+const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clearInitialItem }) => {
     const [activeCategory, setActiveCategory] = useState('All');
-    const [selectedItem, setSelectedItem] = useState(null);
+    const [selectedItem, setSelectedItem] = useState(initialSelectedItem || null);
     const [items, setItems] = useState(MARKETPLACE_ITEMS);
+
+    useEffect(() => {
+        if (initialSelectedItem) {
+            setSelectedItem(initialSelectedItem);
+            if (clearInitialItem) clearInitialItem();
+        }
+    }, [initialSelectedItem, clearInitialItem]);
 
     const categories = ['All', 'Engines', 'Turbos', 'Suspensions', 'Wheels', 'Special'];
 
@@ -122,7 +129,7 @@ const Marketplace = ({ addToInventory, onProfileClick }) => {
 
     const filteredItems = items
         .filter(item => {
-            return activeCategory === 'All' || item.category === activeCategory;
+            return (activeCategory === 'All' || item.category === activeCategory) && item.category !== 'Cars';
         })
         .sort((a, b) => a.numPrice - b.numPrice);
 
@@ -149,8 +156,8 @@ const Marketplace = ({ addToInventory, onProfileClick }) => {
             <div className="flex items-center justify-between h-20 px-8 z-10 w-full bg-black/60 backdrop-blur-md border-b border-white/10 relative">
 
                 {/* Left: Logos */}
-                <div className="flex items-center gap-6">
-                    <div className="scale-75 origin-left">
+                <div className="flex items-center gap-3">
+                    <div className="scale-90 origin-left">
                         <InteractiveLogo />
                     </div>
 
@@ -181,11 +188,11 @@ const Marketplace = ({ addToInventory, onProfileClick }) => {
                             <button
                                 key={cat}
                                 onClick={() => setActiveCategory(cat)}
-                                className={`text-base font-bold uppercase tracking-[0.2em] pb-2 transition-all ${activeCategory === cat
+                                className={`text-sm font-bold uppercase tracking-[0.2em] pb-2 transition-all ${activeCategory === cat
                                     ? 'text-white border-b-2 border-red-600'
                                     : 'text-gray-500 hover:text-white hover:border-b-2 hover:border-gray-500'
                                     }`}
-                                style={{ fontFamily: 'Rajdhani, sans-serif' }}
+                                style={{ fontFamily: 'Orbitron, sans-serif' }}
                             >
                                 {cat}
                             </button>

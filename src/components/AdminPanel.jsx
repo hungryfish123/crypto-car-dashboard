@@ -346,139 +346,201 @@ const AdminPanel = ({ onClose, items }) => {
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
-                            className="max-w-4xl mx-auto"
+                            className="max-w-6xl mx-auto"
                         >
-                            {/* Fee Distribution Logic */}
-                            <div className="bg-gradient-to-br from-green-900/20 to-green-900/5 border border-green-500/30 rounded-xl p-8 mb-8">
-                                <h2 className="text-xl font-bold text-green-400 uppercase tracking-widest mb-6 flex items-center gap-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                    <Wallet size={24} />
-                                    Revenue Distribution
-                                </h2>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                    <div className="space-y-4">
-                                        <label className="text-xs text-green-400/80 uppercase font-bold tracking-wider">Total Fees Collected (SOL)</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500 font-bold">◎</span>
-                                            <input
-                                                type="number"
-                                                step="0.001"
-                                                min="0"
-                                                placeholder="0.00"
-                                                value={feeAmount}
-                                                onChange={(e) => setFeeAmount(e.target.value)}
-                                                className="w-full bg-black/60 border border-green-500/50 rounded-xl py-4 pl-10 pr-4 text-2xl font-mono text-white placeholder-gray-700 focus:outline-none focus:border-green-400 focus:ring-1 focus:ring-green-400 transition-all font-bold"
-                                            />
-                                        </div>
-                                        <p className="text-[10px] text-gray-500">
-                                            This amount will be split among the <span className="text-white font-bold">{activeItems.length} active items</span> based on their rarity weight and supply.
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Distribution Note</label>
-                                        <textarea
-                                            value={distributionNotes}
-                                            onChange={(e) => setDistributionNotes(e.target.value)}
-                                            placeholder="e.g. Weekly Royale Revenue Distribution #42..."
-                                            className="w-full h-full min-h-[100px] bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-white/20 resize-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={async () => {
-                                        if (!feeAmount || parseFloat(feeAmount) <= 0) {
-                                            alert('Please enter a valid fee amount');
-                                            return;
-                                        }
-                                        if (confirm(`Are you sure you want to distribute ${feeAmount} SOL to ${activeItems.length} item types? This action cannot be undone.`)) {
-                                            await distributeFees(parseFloat(feeAmount), null, distributionNotes || null);
-                                        }
-                                    }}
-                                    disabled={distributing || !feeAmount}
-                                    className={`w-full py-4 rounded-xl font-bold uppercase tracking-[0.2em] text-sm transition-all flex items-center justify-center gap-3 relative overflow-hidden group ${distributing
-                                        ? 'bg-green-900/30 text-green-500/50 cursor-wait'
-                                        : 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_30px_rgba(34,197,94,0.3)]'
-                                        }`}
-                                >
-                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
-                                    {distributing ? (
-                                        <>
-                                            <RefreshCw size={20} className="animate-spin" />
-                                            Allocating Rewards...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Send size={20} />
-                                            Distribute Now
-                                        </>
-                                    )}
-                                </button>
-
-                                {/* Feedback Messages */}
-                                {lastResult && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg flex items-start gap-4"
-                                    >
-                                        <CheckCircle size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-green-400 font-bold text-sm uppercase tracking-wider mb-1">Distribution Successful</p>
-                                            <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs font-mono text-green-300/70">
-                                                <span>Total Distributed: <b className="text-white">{lastResult.total_distributed} SOL</b></span>
-                                                <span>Users Rewarded: <b className="text-white">{lastResult.users_affected}</b></span>
-                                                <span className="col-span-2 text-[10px] opacity-50 mt-1">Transaction ID: {Math.random().toString(36).substr(2, 9).toUpperCase()}</span>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-
-                                {distributionError && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="mt-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center gap-4"
-                                    >
-                                        <AlertCircle size={24} className="text-red-500 flex-shrink-0" />
-                                        <div>
-                                            <p className="text-red-400 font-bold text-sm uppercase tracking-wider">Distribution Failed</p>
-                                            <p className="text-red-400/70 text-xs font-mono mt-1">{distributionError}</p>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            {/* Active Items List */}
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4 pl-2">
-                                Active Token Pool ({activeItems.length})
-                            </h3>
-
-                            <div className="space-y-2">
-                                {activeItems.map(item => (
-                                    <div key={item.id} className="bg-white/5 border border-white/5 rounded-lg p-3 flex items-center gap-4 hover:bg-white/[0.07] transition-colors">
-                                        <div className="w-10 h-10 bg-black/40 rounded p-1 flex items-center justify-center border border-white/5">
-                                            <img src={item.image} alt={item.title} className="max-w-full max-h-full object-contain" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="text-xs font-bold text-white uppercase">{item.title}</h4>
-                                            <div className="flex gap-3 text-[10px] text-gray-500 font-mono mt-0.5">
-                                                <span>Level {item.rarityLevel || '?'}</span>
-                                                <span>Supply: {item.supply}</span>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-[10px] text-green-500 font-bold uppercase tracking-wider bg-green-900/20 px-2 py-1 rounded border border-green-900/30">
-                                                Eligible for Fees
-                                            </span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                            <FeeDashboard items={items} itemDetails={itemDetails} />
                         </motion.div>
                     )}
                 </AnimatePresence>
+            </div>
+        </div>
+    );
+};
+
+const FeeDashboard = ({ items, itemDetails }) => {
+    const [stats, setStats] = useState({
+        treasuryBalance: 0,
+        activeCounts: {},
+        totalActiveUsers: 0
+    });
+    const [loading, setLoading] = useState(true);
+
+    const HOURLY_POT = 10; // Hardcoded global constant
+    const TREASURY_WALLET = '967NP22RYpMydnMdtT7QF8f3oahZZx18hwULXcn9iadM';
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        setLoading(true);
+        let balance = 0;
+
+        // 1. Get Real Wallet Balance via Moralis
+        const moralisApiKey = import.meta.env.VITE_MORALIS_API_KEY;
+        if (moralisApiKey) {
+            try {
+                const url = `https://solana-gateway.moralis.io/account/mainnet/${TREASURY_WALLET}/balance`;
+                const response = await fetch(url, {
+                    headers: { 'X-API-Key': moralisApiKey }
+                });
+                const data = await response.json();
+                if (data && data.lamports) {
+                    balance = parseFloat(data.lamports) / 1e9; // Convert lamports to SOL
+                    console.log(`[AdminFees] Fetched treasury balance: ${balance} SOL`);
+                }
+            } catch (err) {
+                console.error('[AdminFees] Failed to fetch treasury balance:', err);
+                // Fallback to logs if API fails
+                const { data: logs } = await supabase
+                    .from('system_logs')
+                    .select('retained_in_treasury')
+                    .eq('event_type', 'REWARD_DISTRIBUTION')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                balance = logs?.[0]?.retained_in_treasury || 0;
+            }
+        } else {
+            console.warn('[AdminFees] Missing Moralis API Key');
+        }
+
+        // 2. Get User Inventory Counts
+        const { data: players } = await supabase
+            .from('player_data')
+            .select('inventory');
+
+        const counts = {};
+        let totalUsers = 0;
+
+        if (players) {
+            players.forEach(p => {
+                if (p.inventory && p.inventory.length > 0) {
+                    totalUsers++;
+                    p.inventory.forEach(item => {
+                        const id = item.id || item.item_id;
+                        counts[id] = (counts[id] || 0) + (item.quantity || 1);
+                    });
+                }
+            });
+        }
+
+        setStats({
+            treasuryBalance: balance,
+            activeCounts: counts,
+            totalActiveUsers: totalUsers
+        });
+        setLoading(false);
+    };
+
+    // --- Calculations ---
+    const activeItems = items.filter(i => !itemDetails[i.id]?.hidden); // Assuming hiding logic passed down or handled
+    // Recalculate Total Theoretical Points
+    const totalPoints = activeItems.reduce((sum, item) => {
+        const rawSupply = itemDetails[item.id]?.supply || item.supply || '1000/1000';
+        const supplyStr = rawSupply.includes('/') ? rawSupply.split('/')[1] : rawSupply;
+        const supply = parseInt(supplyStr || 1000);
+
+        const weight = parseInt(itemDetails[item.id]?.yield || 0);
+        return sum + (supply * weight);
+    }, 0);
+
+    const rewardPerPoint = totalPoints > 0 ? (HOURLY_POT / totalPoints) : 0;
+
+    return (
+        <div className="space-y-8">
+            {/* 1. Treasury Header */}
+            <div className="bg-gradient-to-r from-green-900/40 to-black border border-green-500/30 rounded-2xl p-8 flex items-center justify-between">
+                <div>
+                    <h2 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Treasury Vault</h2>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-white font-mono tracking-tighter">
+                            {stats.treasuryBalance.toFixed(4)}
+                        </span>
+                        <span className="text-green-500 font-bold">SOL</span>
+                    </div>
+                    <p className="text-green-500/50 text-[10px] mt-2 font-mono uppercase tracking-wider">
+                        Next Hourly Pot Injection: +{HOURLY_POT} SOL
+                    </p>
+                </div>
+                <div className="text-right">
+                    <button
+                        onClick={fetchStats}
+                        className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                        <RefreshCw size={20} className={loading ? 'animate-spin text-white' : 'text-gray-500'} />
+                    </button>
+                    <div className="mt-4 text-right">
+                        <span className="block text-2xl font-bold text-white">{stats.totalActiveUsers}</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Active Earners</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* 2. Breakdown Table */}
+            <div className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 ${loading ? 'opacity-50' : ''}`}>
+                <div className="grid grid-cols-12 bg-white/5 p-4 text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                    <div className="col-span-4">Item Name / Yield</div>
+                    <div className="col-span-3 text-right">Theoretical Max (Per Item)</div>
+                    <div className="col-span-2 text-center">Active Users</div>
+                    <div className="col-span-3 text-right">Current Hourly Breakdown</div>
+                </div>
+
+                <div className="max-h-[500px] overflow-y-auto">
+                    {activeItems.map(item => {
+                        const details = itemDetails[item.id] || {};
+                        const weight = parseInt(details.yield || 0);
+                        const activeCount = stats.activeCounts[item.id] || 0;
+
+                        // Theoretical: The amount ONE item *could* earn if all existed
+                        const theoreticalShare = rewardPerPoint * weight;
+
+                        // Current Payout: Theoretical * Active Count
+                        const currentPayout = theoreticalShare * activeCount;
+
+                        return (
+                            <div key={item.id} className="grid grid-cols-12 p-4 border-b border-white/5 items-center hover:bg-white/[0.02] transition-colors">
+                                <div className="col-span-4 flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded flex items-center justify-center bg-white/5 border border-white/5`}>
+                                        <img src={item.image} className="w-6 h-6 object-contain" />
+                                    </div>
+                                    <div>
+                                        <div className="text-white font-bold text-xs">{item.title}</div>
+                                        <div className="text-gray-600 text-[10px] font-mono mt-0.5">Weight: <span className="text-yellow-500">{weight}</span></div>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-3 text-right">
+                                    <div className="text-gray-400 font-mono text-xs">{theoreticalShare.toFixed(6)} SOL</div>
+                                    <div className="text-[9px] text-gray-600 uppercase">Max / Hr</div>
+                                </div>
+
+                                <div className="col-span-2 text-center">
+                                    <div className={`inline-block px-2 py-1 rounded text-[10px] font-bold ${activeCount > 0 ? 'bg-blue-900/30 text-blue-400' : 'bg-gray-800 text-gray-600'}`}>
+                                        {activeCount}
+                                    </div>
+                                </div>
+
+                                <div className="col-span-3 text-right">
+                                    <div className="text-green-400 font-mono font-bold text-xs">
+                                        {currentPayout.toFixed(5)} SOL
+                                    </div>
+                                    <div className="text-[9px] text-green-900/60 uppercase">Total Burn</div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Summary Footer */}
+                <div className="bg-white/5 p-4 flex justify-between items-center text-xs font-mono border-t border-white/10">
+                    <span className="text-gray-500">Universal Rate (Per 1.0 Weight): <span className="text-white">{rewardPerPoint.toFixed(8)} SOL</span></span>
+                    <span className="text-green-500">Total Hourly Output: <span className="font-bold text-white">
+                        {activeItems.reduce((sum, item) => {
+                            const weight = parseInt(itemDetails[item.id]?.yield || 0);
+                            return sum + (rewardPerPoint * weight * (stats.activeCounts[item.id] || 0));
+                        }, 0).toFixed(4)} SOL
+                    </span></span>
+                </div>
             </div>
         </div>
     );

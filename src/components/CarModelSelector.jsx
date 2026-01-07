@@ -1,281 +1,232 @@
-// CarModelSelector.jsx - Car model headline and navigation arrows
-// Allows switching between car models with smooth animations
-// Supports owned/locked states with silhouette display for unpurchased cars
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, Lock, Car, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Lock, Check } from 'lucide-react';
+import { unlockCar } from '../dbServices'; // Import the new unlock service
 
-// Car models configuration - add new models here
-const CAR_MODELS = [
+// Define Car Models Configuration
+export const CAR_MODELS = [
     {
         id: 'bmw_m3_e30',
-        name: 'BMW M3',
-        subtitle: 'E30 Coupe • 1986',
+        name: 'BMW M3 E30',
+        year: '1986',
+        description: 'The legend that started it all. Required for entry.',
+        price: 'Owned',
+        hp: '200 HP',
+        accel: '6.7s',
+        topSpeed: '235 km/h',
         model: '/bmw_m3_coupe_e30_1986.glb',
-        price: 0, // 0 = free/starter car
-        defaultOwned: true,
-        targetNames: ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'],
-        autoScale: false,
-        stats: {
-            weight: '1,200 kg',
-            power: '195 HP',
-            topSpeed: '235 km/h',
-            acceleration: '6.7s'
-        }
+        meshName: 'paint_M3', // For color changing
+        isDefault: true
     },
     {
         id: 'vw_golf_gti_mk2',
-        name: 'VW Golf GTI',
-        subtitle: 'Mk2 • 1992',
+        name: 'VW Golf GTI Mk2',
+        year: '1992',
+        description: 'The hot hatch benchmark. Practical speed.',
+        price: '10 Tokens',
+        hp: '139 HP',
+        accel: '8.3s',
+        topSpeed: '208 km/h',
         model: '/1992_volkswagen_golf_gti_mk2.glb',
-        price: 1000, // Token amount to burn
-        defaultOwned: false,
-        targetNames: [
-            'car_volkswagen_golfgtimk2_1992_Mesh:M_Paint_Metal_High_carpaint_0',
-            'car_volkswagen_golfgtimk2_1992_Mesh_M_Paint_Metal_High_carpaint_0',
-            'car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'
-        ],
-        autoScale: false,
-        stats: {
-            weight: '920 kg',
-            power: '139 HP',
-            topSpeed: '208 km/h',
-            acceleration: '8.5s'
-        }
+        meshName: 'paint_golf',
+        locked: true
     },
     {
-        id: 'mazda_mx5_1989',
-        name: 'Mazda MX-5',
-        subtitle: '1989',
-        model: '/1989_mazda_mx-5.glb',
-        price: 1500,
-        defaultOwned: false,
-        autoScale: false,
-        stats: {
-            weight: '950 kg',
-            power: '116 HP',
-            topSpeed: '195 km/h',
-            acceleration: '8.8s'
-        }
-    },
-    {
-        id: 'audi_sport_quattro_1984',
+        id: 'audi_sport_quattro',
         name: 'Audi Sport Quattro',
-        subtitle: '1984',
+        year: '1984',
+        description: 'Rally legend. Pure grip and acceleration.',
+        price: '10 Tokens',
+        hp: '306 HP',
+        accel: '4.8s',
+        topSpeed: '250 km/h',
         model: '/1984_audi_sport_quattro.glb',
-        price: 2500,
-        defaultOwned: false,
-        targetNames: ['Object_8', 'Object_11', 'Object_110', 'Object_128', 'Object_539'],
-        autoScale: false,
-        stats: {
-            weight: '1,300 kg',
-            power: '306 HP',
-            topSpeed: '250 km/h',
-            acceleration: '4.8s'
-        }
+        meshName: 'paint_audi',
+        locked: true
     },
     {
-        id: 'ferrari_f40_1987',
-        name: 'Ferrari F40',
-        subtitle: '1987',
-        model: '/1987_ferrari_f40.glb',
-        price: 5000,
-        defaultOwned: false,
-        autoScale: false,
-        stats: {
-            weight: '1,100 kg',
-            power: '471 HP',
-            topSpeed: '324 km/h',
-            acceleration: '4.1s'
-        }
+        id: 'mazda_mx5_na',
+        name: 'Mazda MX-5 NA',
+        year: '1989',
+        description: 'Pure driving joy. Lightweight roadster.',
+        price: '10 Tokens',
+        hp: '116 HP',
+        accel: '8.1s',
+        topSpeed: '203 km/h',
+        model: '/1989_mazda_mx-5.glb',
+        meshName: 'paint_mazda',
+        locked: true
     },
+    {
+        id: 'ferrari_f40',
+        name: 'Ferrari F40',
+        year: '1987',
+        description: 'The last Ferrari approved by Enzo. No aids.',
+        price: '20 Tokens',
+        hp: '478 HP',
+        accel: '4.1s',
+        topSpeed: '324 km/h',
+        model: '/1987_ferrari_f40.glb',
+        meshName: 'paint_f40',
+        locked: true
+    }
 ];
 
-const CarModelSelector = ({
-    currentModelIndex = 0,
-    onModelChange,
-    isTransitioning = false,
-    ownedCars = ['bmw_m3_e30'], // Array of owned car IDs
-    onPurchase // Callback when user wants to purchase: (carId, price) => void
-}) => {
-    const currentModel = CAR_MODELS[currentModelIndex] || CAR_MODELS[0];
-    const hasMultipleModels = CAR_MODELS.length > 1;
-    const isOwned = ownedCars.includes(currentModel.id);
+const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = [], walletAddress, tokenMappings = {} }) => {
 
-    const handlePrevious = () => {
-        if (isTransitioning || !hasMultipleModels) return;
-        const newIndex = currentModelIndex === 0
-            ? CAR_MODELS.length - 1
-            : currentModelIndex - 1;
-        // Direction -1 for Previous
-        onModelChange?.(newIndex, CAR_MODELS[newIndex], -1);
-    };
+    // Ensure index is valid
+    const safeIndex = (currentModelIndex >= 0 && currentModelIndex < CAR_MODELS.length) ? currentModelIndex : 0;
+
+    // Derived state
+    const currentModel = CAR_MODELS[safeIndex];
+    // Check ownership
+    const isOwned = currentModel.isDefault || ownedCars.includes(currentModel.id);
+
+    // Get Contract Address for this car
+    const contractAddress = tokenMappings[currentModel.id];
 
     const handleNext = () => {
-        if (isTransitioning || !hasMultipleModels) return;
-        const newIndex = currentModelIndex === CAR_MODELS.length - 1
-            ? 0
-            : currentModelIndex + 1;
-        // Direction 1 for Next
-        onModelChange?.(newIndex, CAR_MODELS[newIndex], 1);
+        const nextIndex = (safeIndex + 1) % CAR_MODELS.length;
+        if (onModelChange) {
+            onModelChange(nextIndex, CAR_MODELS[nextIndex], 1);
+        }
     };
 
-    const handlePurchase = async () => {
-        if (onPurchase && !isOwned) {
-            // Direct purchase/unlock
-            onPurchase(currentModel.id, currentModel.price);
+    const handlePrev = () => {
+        const prevIndex = (safeIndex - 1 + CAR_MODELS.length) % CAR_MODELS.length;
+        if (onModelChange) {
+            onModelChange(prevIndex, CAR_MODELS[prevIndex], -1);
+        }
+    };
+
+    const handleBuy = () => {
+        if (contractAddress) {
+            window.open(`https://jup.ag/swap/SOL-${contractAddress}`, '_blank');
+        } else {
+            alert("Token contract not yet launched for this car. Check back soon!");
         }
     };
 
     return (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-none">
-            {/* Main Container */}
-            <div className="flex items-center gap-4 pointer-events-auto">
-                {/* Left Arrow */}
-                <motion.button
-                    onClick={handlePrevious}
-                    disabled={!hasMultipleModels || isTransitioning}
-                    className={`group relative w-12 h-12 flex items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 ${hasMultipleModels
-                        ? 'bg-black/40 border-white/20 hover:bg-red-600/20 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] cursor-pointer'
-                        : 'bg-black/20 border-white/10 cursor-not-allowed opacity-30'
-                        }`}
-                    whileHover={hasMultipleModels ? { scale: 1.1 } : {}}
-                    whileTap={hasMultipleModels ? { scale: 0.95 } : {}}
+        <div className="absolute top-24 left-0 w-full px-8 pointer-events-none z-30">
+            <div className="max-w-4xl mx-auto relative flex flex-col items-center">
+
+                {/* 1. BADGE (Top) */}
+                <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={`badge-${currentModel.id}`}
+                    className="mb-2 pointer-events-auto"
                 >
-                    <ChevronLeft
-                        size={24}
-                        className={`transition-colors ${hasMultipleModels
-                            ? 'text-gray-400 group-hover:text-red-400'
-                            : 'text-gray-600'
-                            }`}
-                    />
-                </motion.button>
+                    {isOwned ? (
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/50 bg-black/60 backdrop-blur text-green-400 font-bold uppercase tracking-widest text-[10px]">
+                            <Car size={12} /> <span>OWNED</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-orange-500/50 bg-black/60 backdrop-blur text-orange-400 font-bold uppercase tracking-widest text-[10px]">
+                            <Lock size={12} /> <span>LOCKED</span>
+                        </div>
+                    )}
+                </motion.div>
 
-                {/* Car Name Display */}
-                <div className="min-w-[320px] text-center">
-                    <AnimatePresence mode="wait">
+                {/* 2. CAR NAME + ARROWS ROW */}
+                <div className="flex items-center justify-center gap-4 md:gap-8 w-full pointer-events-auto mb-1">
+                    {/* Prev Arrow */}
+                    <button
+                        onClick={handlePrev}
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/10 bg-black/40 backdrop-blur flex items-center justify-center hover:bg-white/10 hover:border-white/30 transition-all text-white/70 hover:text-white"
+                    >
+                        <ChevronLeft size={20} />
+                    </button>
+
+                    {/* Car Name */}
+                    <motion.h2
+                        key={currentModel.name}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-3xl md:text-4xl font-black uppercase text-white tracking-tighter text-center"
+                        style={{
+                            fontFamily: 'Orbitron, sans-serif',
+                            textShadow: '0 4px 10px rgba(0,0,0,0.5)'
+                        }}
+                    >
+                        {currentModel.name}
+                    </motion.h2>
+
+                    {/* Next Arrow */}
+                    <button
+                        onClick={handleNext}
+                        className="w-8 h-8 md:w-10 md:h-10 rounded-full border border-white/10 bg-black/40 backdrop-blur flex items-center justify-center hover:bg-white/10 hover:border-white/30 transition-all text-white/70 hover:text-white"
+                    >
+                        <ChevronRight size={20} />
+                    </button>
+                </div>
+
+                {/* 3. SUBTITLE (Model • Year) */}
+                <motion.div
+                    key={`sub-${currentModel.id}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 text-gray-500 font-bold tracking-[0.2em] text-[10px] uppercase mb-6 pointer-events-auto"
+                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                >
+                    <div className="h-px w-8 bg-gray-700"></div>
+                    <span>{currentModel.id.replace(/_/g, ' ')}</span>
+                    <span className="text-red-600">•</span>
+                    <span>{currentModel.year}</span>
+                    <div className="h-px w-8 bg-gray-700"></div>
+                </motion.div>
+
+                {/* 4. BUY BUTTON (If Locked) */}
+                <AnimatePresence mode="wait">
+                    {!isOwned && (
                         <motion.div
-                            key={currentModel.id}
-                            initial={{ opacity: 0, y: 20 }}
+                            key="buy-btn"
+                            initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3 }}
-                            className="relative"
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mb-6 pointer-events-auto"
                         >
-                            {/* Ownership Badge */}
-                            <div className="flex items-center justify-center gap-2 mb-1">
-                                {isOwned ? (
-                                    <span className="flex items-center gap-1 text-[10px] text-green-400 uppercase tracking-widest font-bold bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/30">
-                                        <Check size={10} /> Owned
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center gap-1 text-[10px] text-orange-400 uppercase tracking-widest font-bold bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/30">
-                                        <Lock size={10} /> Locked
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Main Car Name */}
-                            <h1
-                                className={`text-4xl md:text-5xl font-black uppercase tracking-wider ${isOwned
-                                    ? 'text-white drop-shadow-[0_0_30px_rgba(220,38,38,0.3)]'
-                                    : 'text-gray-500 drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]'
-                                    }`}
-                                style={{ fontFamily: 'Rajdhani, sans-serif' }}
+                            <button
+                                onClick={handleBuy}
+                                disabled={!contractAddress}
+                                className={`
+                                    px-8 py-3 font-bold uppercase tracking-widest text-sm transition-all rounded-xl
+                                    ${contractAddress
+                                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'}
+                                `}
                             >
-                                {currentModel.name}
-                            </h1>
-
-                            {/* Subtitle */}
-                            <div className="flex items-center justify-center gap-2 mt-1">
-                                <div className={`h-px w-8 bg-gradient-to-r from-transparent ${isOwned ? 'to-red-500/50' : 'to-gray-600/50'}`}></div>
-                                <span className={`text-sm uppercase tracking-[0.3em] font-medium ${isOwned ? 'text-gray-400' : 'text-gray-600'}`}>
-                                    {currentModel.subtitle}
-                                </span>
-                                <div className={`h-px w-8 bg-gradient-to-l from-transparent ${isOwned ? 'to-red-500/50' : 'to-gray-600/50'}`}></div>
-                            </div>
-
-                            {/* Decorative underline */}
-                            <motion.div
-                                className={`absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-transparent ${isOwned ? 'via-red-500' : 'via-gray-600'} to-transparent`}
-                                initial={{ width: 0 }}
-                                animate={{ width: '60%' }}
-                                transition={{ delay: 0.2, duration: 0.4 }}
-                            />
-
-                            {/* Purchase Button - Only for locked cars */}
-                            {!isOwned && (
-                                <motion.button
-                                    onClick={handlePurchase}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.3 }}
-                                    className={`mt-6 px-6 py-3 
-                                             bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 border-orange-500/30
-                                             text-white font-bold uppercase tracking-wider text-sm rounded-xl
-                                             border shadow-[0_0_20px_rgba(234,88,12,0.3)]
-                                             hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all duration-300
-                                             flex items-center justify-center gap-2 mx-auto`}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    style={{ fontFamily: 'Rajdhani, sans-serif' }}
-                                >
-                                    <Lock size={18} />
-                                    Unlock Car
-                                </motion.button>
+                                {contractAddress ? 'UNLOCK CAR' : 'COMING SOON'}
+                            </button>
+                            {contractAddress && (
+                                <p className="text-[10px] text-green-400 font-mono mt-2 text-center tracking-wider animate-pulse">
+                                    Hold Token to Auto-Unlock
+                                </p>
                             )}
                         </motion.div>
-                    </AnimatePresence>
+                    )}
+                </AnimatePresence>
+
+                {/* 5. PAGINATION DOTS (Bottom of stack) */}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    {CAR_MODELS.map((model, idx) => (
+                        <button
+                            key={model.id}
+                            onClick={() => onModelChange && onModelChange(idx, model, idx > safeIndex ? 1 : -1)}
+                            className={`
+                                transition-all duration-300 rounded-full
+                                ${idx === safeIndex
+                                    ? 'w-8 h-1.5 bg-red-600'
+                                    : 'w-1.5 h-1.5 bg-gray-600 hover:bg-gray-400'}
+                            `}
+                        />
+                    ))}
                 </div>
 
-                {/* Right Arrow */}
-                <motion.button
-                    onClick={handleNext}
-                    disabled={!hasMultipleModels || isTransitioning}
-                    className={`group relative w-12 h-12 flex items-center justify-center rounded-full border backdrop-blur-md transition-all duration-300 ${hasMultipleModels
-                        ? 'bg-black/40 border-white/20 hover:bg-red-600/20 hover:border-red-500/50 hover:shadow-[0_0_20px_rgba(220,38,38,0.3)] cursor-pointer'
-                        : 'bg-black/20 border-white/10 cursor-not-allowed opacity-30'
-                        }`}
-                    whileHover={hasMultipleModels ? { scale: 1.1 } : {}}
-                    whileTap={hasMultipleModels ? { scale: 0.95 } : {}}
-                >
-                    <ChevronRight
-                        size={24}
-                        className={`transition-colors ${hasMultipleModels
-                            ? 'text-gray-400 group-hover:text-red-400'
-                            : 'text-gray-600'
-                            }`}
-                    />
-                </motion.button>
             </div>
-
-            {/* Model Counter Dots */}
-            {hasMultipleModels && (
-                <div className="flex items-center gap-2 mt-4 pointer-events-auto">
-                    {CAR_MODELS.map((carModel, index) => {
-                        const carIsOwned = ownedCars.includes(carModel.id);
-                        return (
-                            <button
-                                key={index}
-                                onClick={() => !isTransitioning && onModelChange?.(index, CAR_MODELS[index])}
-                                className={`h-2 rounded-full transition-all duration-300 ${index === currentModelIndex
-                                    ? carIsOwned
-                                        ? 'bg-red-500 w-6 shadow-[0_0_10px_rgba(220,38,38,0.5)]'
-                                        : 'bg-orange-500 w-6 shadow-[0_0_10px_rgba(234,88,12,0.5)]'
-                                    : carIsOwned
-                                        ? 'w-2 bg-white/30 hover:bg-white/50'
-                                        : 'w-2 bg-gray-600/50 hover:bg-gray-500/50'
-                                    }`}
-                            />
-                        );
-                    })}
-                </div>
-            )}
         </div>
     );
 };
 
-// Export the models configuration for use in App.jsx
-export { CAR_MODELS };
 export default CarModelSelector;

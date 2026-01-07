@@ -7,7 +7,7 @@ import InteractiveLogo from './InteractiveLogo';
 import { supabase } from '../supabaseClient';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, earnings, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel }) => {
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, earnings, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem }) => {
     const { playHover } = useAudio();
 
     const getRarityStyles = (level) => {
@@ -29,8 +29,8 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
             const { data: mappings } = await supabase.from('item_mappings').select('*');
             const hiddenIds = mappings ? mappings.filter(m => m.hidden).map(m => m.item_id) : [];
 
-            // Filter all marketplace items that are NOT hidden
-            const visibleItems = MARKETPLACE_ITEMS.filter(item => !hiddenIds.includes(item.id));
+            // Filter all marketplace items that are NOT hidden AND NOT Cars
+            const visibleItems = MARKETPLACE_ITEMS.filter(item => !hiddenIds.includes(item.id) && item.category !== 'Cars');
 
             // Prefer showing 'Special' mods first, or just take the last few
             const specials = visibleItems.filter(item => item.category === 'Special');
@@ -105,28 +105,30 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                             };
 
                             return (
-                                <div key={item.id} onClick={() => setActivePage('Marketplace')} onMouseEnter={playHover}
+                                <div key={item.id} onClick={() => onNavigateToItem && onNavigateToItem(item)} onMouseEnter={playHover}
                                     className={`h-36 bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-pointer active:scale-95 transition-all duration-200 hover:scale-105 group`}>
 
                                     {/* Rarity Label (Top Right) */}
                                     <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded ${getRarityStyles(item.rarityLevel)} text-white z-10`}>{rarityLabel}</div>
 
-                                    <div className="h-[75%] w-full flex items-center justify-center p-1">
-                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain drop-shadow-md p-1 transition-transform duration-200 group-hover:scale-110 pointer-events-none" onError={(e) => e.target.style.display = 'none'} />
+                                    {/* Full image - takes entire space */}
+                                    <div className="h-full w-full flex items-center justify-center p-3">
+                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-110 pointer-events-none" onError={(e) => e.target.style.display = 'none'} />
                                     </div>
 
-                                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[35%]">
-                                        <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight transition-colors" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
-                                        <div className="text-[10px] text-green-400 font-bold mt-0.5" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.cashback} Yield</div>
+                                    {/* Hover Panel - Slides up from bottom */}
+                                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/95 to-transparent flex flex-col items-center justify-end translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out h-1/2">
+                                        <h4 className="text-white text-xs font-bold uppercase text-center truncate w-full leading-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
+                                        <div className="text-[10px] text-red-500 font-bold mt-1 uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.cashback} Yield</div>
                                     </div>
                                 </div>
                             );
                         })}
-                    </div>
-                </div>
+                    </div >
+                </div >
 
                 {/* Shortened centered divider */}
-                <div className="h-px w-[85%] mx-auto bg-white/10 shrink-0"></div>
+                < div className="h-px w-[85%] mx-auto bg-white/10 shrink-0" ></div >
 
                 <div className="flex-1 overflow-hidden flex flex-col relative">
                     <h3 className="px-4 pt-4 text-red-500 text-base font-bold tracking-[0.2em] mb-4 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
@@ -213,7 +215,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                         </button>
                     </div>
                 </div>
-            </motion.div>
+            </motion.div >
         </>
     );
 };

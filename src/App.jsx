@@ -628,6 +628,7 @@ class ErrorBoundary extends React.Component {
 function App() {
   const { user, authenticated } = usePrivy();
   const [activePage, setActivePage] = useState('Garage');
+  const [initialSelectedItem, setInitialSelectedItem] = useState(null);
   const [earnings, setEarnings] = useState(0); // Using this as 'Cash' for now
   const [environment, setEnvironment] = useState('city'); // Default environment lighting
   const [sceneBackground, setSceneBackground] = useState('grid'); // Default floor type
@@ -636,11 +637,61 @@ function App() {
 
   const [specialEffect, setSpecialEffect] = useState(null); // 'rainbow', 'galaxy', or null
 
+  // Global Theme Utility - Apply saved theme on load
+  const applyGlobalThemeFromColor = (color) => {
+    let themeColor = color;
+    if (color.toLowerCase() === '#000000') themeColor = '#9ca3af';
+    if (color.toLowerCase() === '#ffffff') themeColor = '#ffffff';
+
+    const hexToRgb = (hex) => {
+      let r, g, b;
+      if (hex.length === 4) {
+        r = parseInt(hex[1] + hex[1], 16);
+        g = parseInt(hex[2] + hex[2], 16);
+        b = parseInt(hex[3] + hex[3], 16);
+      } else {
+        r = parseInt(hex.substring(1, 3), 16);
+        g = parseInt(hex.substring(3, 5), 16);
+        b = parseInt(hex.substring(5, 7), 16);
+      }
+      return `${r}, ${g}, ${b}`;
+    };
+
+    const rgb = hexToRgb(themeColor);
+    const styleId = 'dynamic-theme-styles';
+    let style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+
+    style.textContent = `
+      .text-red-400, .text-red-500, .text-red-600, .text-red-700 { color: ${themeColor} !important; }
+      .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700 { background-color: ${themeColor} !important; }
+      .border-red-400, .border-red-500, .border-red-600, .border-red-500\\/20, .border-red-500\\/30, .border-red-500\\/50 { border-color: ${themeColor} !important; }
+      .from-red-400, .from-red-500, .from-red-600 { --tw-gradient-from: ${themeColor} !important; }
+      .to-red-400, .to-red-500, .to-red-600 { --tw-gradient-to: ${themeColor} !important; }
+      .via-red-400, .via-red-500, .via-red-600 { --tw-gradient-via: ${themeColor} !important; }
+      .bg-red-500\\/5 { background-color: rgba(${rgb}, 0.05) !important; }
+      .bg-red-500\\/10, .bg-red-900\\/20 { background-color: rgba(${rgb}, 0.1) !important; }
+      .bg-red-500\\/20, .bg-red-600\\/20 { background-color: rgba(${rgb}, 0.2) !important; }
+      .bg-red-500\\/30 { background-color: rgba(${rgb}, 0.3) !important; }
+      .bg-red-500\\/50 { background-color: rgba(${rgb}, 0.5) !important; }
+      .shadow-red-500\\/50, .shadow-red-900\\/40 { --tw-shadow-color: ${themeColor} !important; }
+      ::selection { background-color: ${themeColor}; color: black; }
+      input[type="range"]::-webkit-slider-thumb { background-color: ${themeColor} !important; border-color: white !important; }
+      input[type="range"]::-moz-range-thumb { background-color: ${themeColor} !important; border-color: white !important; }
+      ::-webkit-scrollbar-thumb { background-color: ${themeColor} !important; }
+    `;
+  };
+
   // Car model selection
   const [currentCarModelIndex, setCurrentCarModelIndex] = useState(0);
   const [isModelTransitioning, setIsModelTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState(1); // 1 = Next, -1 = Prev
   const [ownedCars, setOwnedCars] = useState(['bmw_m3_e30']); // Array of owned car IDs
+  const [itemMappings, setItemMappings] = useState({}); // Map of itemId -> Contract Address
 
   // Get current car model info
   const currentCarModel = CAR_MODELS[currentCarModelIndex] || CAR_MODELS[0];
@@ -943,6 +994,7 @@ function App() {
 
   // Car Customization State
   const [carColor, setCarColor] = useState('#FF0000'); // Initial Red
+  const [themeColor, setThemeColor] = useState('#dc2626'); // Global accent color
   const [carFinish, setCarFinish] = useState('glossy'); // 'glossy', 'matte', 'metallic'
   const [activeTab, setActiveTab] = useState('color'); // 'color', 'finish'
 
@@ -1023,6 +1075,37 @@ function App() {
             console.log('Cleared pending referral:', pendingReferral);
           }
           setCarColor(data.car_color || '#FF0000');
+          // Apply saved theme on load
+          if (data.theme_color) {
+            setThemeColor(data.theme_color);
+            applyGlobalThemeFromColor(data.theme_color);
+          }
+
+          // ==============================================
+          // FETCH PERSISTED CAR UNLOCKS from user_unlocks table
+          // ==============================================
+          // ==============================================
+          // FETCH PERSISTED CAR UNLOCKS from user_unlocks table
+          // ==============================================
+          try {
+            const { data: unlocks, error: unlocksError } = await supabase
+              .from('user_unlocks')
+              .select('car_id')
+              .eq('user_wallet', walletAddress);
+
+            if (!unlocksError && unlocks && unlocks.length > 0) {
+              const unlockedCarIds = unlocks.map(u => u.car_id);
+              console.log('[BurnUnlock] Loaded persisted unlocks:', unlockedCarIds);
+              // Merge with default owned cars (bmw_m3_e30 is always owned)
+              setOwnedCars(prev => {
+                const merged = new Set([...prev, ...unlockedCarIds]);
+                return Array.from(merged);
+              });
+            }
+          } catch (unlockErr) {
+            console.warn('[BurnUnlock] Failed to load unlocks:', unlockErr);
+          }
+
 
           // ==============================================
           // WALLET SYNC: Check wallet for tokens matching item_mappings
@@ -1042,13 +1125,16 @@ function App() {
             } else if (mappings && mappings.length > 0) {
               console.log('[WalletSync] Found mappings with CAs:', mappings);
 
-              // 2. Create a map of contract address -> item_id
+              // 2. Create a map of contract address -> item_id AND item_id -> CA
               const caToItemId = {};
+              const idToCa = {};
               mappings.forEach(m => {
                 if (m.contract_address) {
                   caToItemId[m.contract_address.toLowerCase()] = m.item_id;
+                  idToCa[m.item_id] = m.contract_address;
                 }
               });
+              setItemMappings(idToCa);
 
               // 3. Fetch wallet SPL tokens using Moralis API
               const moralisApiKey = import.meta.env.VITE_MORALIS_API_KEY;
@@ -1083,8 +1169,18 @@ function App() {
                       // Check if this token matches any of our items
                       if (mint && caToItemId[mint] && balance > 0) {
                         const itemId = caToItemId[mint];
+                        const isCar = CAR_MODELS.some(c => c.id === itemId);
 
-                        if (!existingIds.has(itemId)) {
+                        if (isCar) {
+                          // Auto-Unlock Car Logic
+                          console.log(`[WalletSync] 🚗 Found token for Car: ${itemId}`);
+                          setOwnedCars(prev => {
+                            if (!prev.includes(itemId)) {
+                              return [...prev, itemId];
+                            }
+                            return prev;
+                          });
+                        } else if (!existingIds.has(itemId)) {
                           console.log('[WalletSync] 🎉 Found matching token!', itemId, 'Balance:', balance);
 
                           // Look up the actual marketplace item data
@@ -1171,13 +1267,14 @@ function App() {
 
       saveUserData(walletAddress, {
         carColor,
+        themeColor,
         inventory,
         equipped_parts: equippedPartsByCar,
         cash: earnings,
         netWorth: currentNetWorth
       });
     }
-  }, [carColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode]);
+  }, [carColor, themeColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode]);
 
 
   const handleConnectWallet = () => {
@@ -1249,6 +1346,8 @@ function App() {
           isTransitioning={isModelTransitioning}
           ownedCars={ownedCars}
           onPurchase={handleCarPurchase}
+          walletAddress={user?.wallet?.address}
+          tokenMappings={itemMappings}
         />
       )}
 
@@ -1347,11 +1446,14 @@ function App() {
               // Calculate total yield from all equipped parts on current car
               Object.values(equippedPartsByCar[currentCarModel.id] || {}).reduce((total, part) => {
                 if (!part) return total;
-                // Extract number from string like "+0.005 SOL/h"
                 const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
                 return total + yieldVal;
               }, 0).toFixed(4)
             }
+            onNavigateToItem={(item) => {
+              setInitialSelectedItem(item);
+              setActivePage('Marketplace');
+            }}
           />)}
 
         {/* Admin Panel Overlay */}
@@ -1369,7 +1471,14 @@ function App() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="absolute inset-0 z-10 bg-black/80 backdrop-blur-sm"
           >
-            <Marketplace addToInventory={addToInventory} onProfileClick={() => setActivePage('Profile')} />
+            <div className="w-full h-full">
+              <Marketplace
+                addToInventory={addToInventory}
+                onProfileClick={() => setActivePage('Profile')}
+                initialSelectedItem={initialSelectedItem}
+                clearInitialItem={() => setInitialSelectedItem(null)}
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1377,62 +1486,47 @@ function App() {
       {/* Race Page - Locked Interface */}
       {activePage === 'Race' && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-black overflow-hidden">
-          {/* Cyber-Grid Background */}
+          {/* Cyber-Grid Background - Kept as requested */}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-
-          {/* Red Vignette */}
-          <div className="absolute inset-0 bg-radial-gradient from-red-900/20 to-transparent pointer-events-none"></div>
 
           {/* Main Card */}
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="relative max-w-2xl w-full p-12 border border-white/10 bg-black/60 backdrop-blur-xl flex flex-col items-center text-center shadow-[0_0_50px_rgba(220,38,38,0.1)]"
+            className="relative max-w-2xl w-full p-12 border border-white/10 bg-black/60 backdrop-blur-xl flex flex-col items-center text-center rounded-3xl"
           >
-            {/* Hazard Stripes Top Border */}
-            <div className="absolute top-0 left-0 w-full h-1 bg-[repeating-linear-gradient(45deg,#DC2626,#DC2626_10px,transparent_10px,transparent_20px)] opacity-50"></div>
-
             {/* Lock Icon */}
             <div className="mb-8 relative">
-              <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full scale-150 animate-pulse"></div>
               <Lock className="w-24 h-24 text-red-500 opacity-90 animate-pulse relative z-10" />
             </div>
 
             {/* Title */}
             <h1
-              className="text-6xl font-bold italic uppercase text-white mb-2 tracking-wider"
-              style={{ fontFamily: 'Rajdhani, sans-serif', textShadow: '0 0 30px rgba(220,38,38,0.5)' }}
+              className="text-5xl font-bold italic uppercase text-red-500 mb-2 tracking-wider"
+              style={{ fontFamily: 'Orbitron, sans-serif' }}
             >
-              Race Mode Locked
+              RACE MODE LOCKED
             </h1>
 
             {/* Subtitle */}
-            <p className="text-xl text-gray-400 tracking-[0.2em] font-medium mb-12 uppercase" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
+            <p className="text-lg text-white tracking-[0.2em] font-medium mb-12 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
               Server maintenance in progress. The streets are closed.
             </p>
 
             {/* Notify Button */}
-            <button className="group relative px-8 py-3 bg-transparent border border-red-500/50 hover:border-red-600 text-red-500 hover:text-white overflow-hidden transition-all duration-300">
+            <button className="group relative px-12 py-4 bg-transparent border border-white/20 hover:border-red-600 text-white overflow-hidden transition-all duration-300 rounded-lg">
               <div className="absolute inset-0 w-full h-full bg-red-600 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out z-0"></div>
-              <span className="relative z-10 font-bold uppercase tracking-widest text-sm flex items-center gap-2" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                <Bell size={16} />
+              <span className="relative z-10 font-bold uppercase tracking-widest text-lg flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                <Bell size={20} />
                 Notify When Live
               </span>
             </button>
 
             {/* Footer Text */}
-            <div className="mt-8 text-xs text-red-500/60 font-mono flex items-center gap-2">
-              <span>ESTIMATED LAUNCH</span>
-              <span className="animate-pulse">:</span>
-              <span>Q4 2025</span>
+            <div className="mt-8 text-xs text-gray-400 font-mono flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+              <span>Launching soon...</span>
             </div>
-
-            {/* Corner Accents */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-l border-t border-white/30"></div>
-            <div className="absolute top-0 right-0 w-2 h-2 border-r border-t border-white/30"></div>
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-l border-b border-white/30"></div>
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-r border-b border-white/30"></div>
           </motion.div>
         </div>
       )}
@@ -1461,6 +1555,8 @@ function App() {
           setSpecialEffect={setSpecialEffect}
           rainbowUnlocked={rainbowUnlocked}
           onUnlockRainbow={handleUnlockRainbow}
+          themeColor={themeColor}
+          setThemeColor={setThemeColor}
         />
       )}
 

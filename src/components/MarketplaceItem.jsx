@@ -41,13 +41,21 @@ const MarketplaceItem = ({
             className={`group relative bg-[#0a0a0a]/80 backdrop-blur-md rounded-xl overflow-hidden hover:scale-[1.02] transition-all duration-300 shadow-xl flex flex-col h-[420px] cursor-pointer ${isSpecial ? 'rainbow-border' : 'border border-white/5'}`}
         >
             {/* Price Badge (Top Right) */}
+            {/* Price Badge (Top Right) */}
             <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-                {isCrypto && (
-                    <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
+                {isCrypto ? (
+                    <>
+                        <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold animate-pulse">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
+                        </span>
+                        <span className="text-sm font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{price}</span>
+                    </>
+                ) : (
+                    <span className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                        <span className="w-2 h-2 rounded-full border-2 border-gray-500 border-t-transparent animate-spin"></span>
+                        FETCHING DATA
                     </span>
                 )}
-                <span className="text-sm font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{price}</span>
             </div>
 
             {/* Centered Rarity Badge (Top Center) */}
@@ -72,7 +80,7 @@ const MarketplaceItem = ({
 
                 {/* Title */}
                 <div className="text-center relative z-10 w-full">
-                    <h3 className="text-2xl font-bold text-white uppercase tracking-wider" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
+                    <h3 className="text-2xl font-bold text-white uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                         {title}
                     </h3>
                 </div>

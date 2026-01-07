@@ -323,7 +323,7 @@ const Callout = ({ category, item, attachPoint, calloutPos }) => {
                         style={{
                             color: isSpecial ? undefined : rarityColor,
                             fontSize: '16px',
-                            fontFamily: 'Rajdhani, sans-serif',
+                            fontFamily: 'Orbitron, sans-serif',
                             fontWeight: '800',
                             textTransform: 'uppercase',
                             textAlign: 'center',

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, CheckCircle, Lock } from 'lucide-react';
+import { Check, CheckCircle, Lock, Globe } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
 
 export default function PaintShop({
@@ -20,8 +20,10 @@ export default function PaintShop({
     setSceneBackground,
     specialEffect,
     setSpecialEffect,
-    rainbowUnlocked, // New prop
-    onUnlockRainbow  // New prop
+    rainbowUnlocked,
+    onUnlockRainbow,
+    themeColor,
+    setThemeColor
 }) {
     const [showSuccess, setShowSuccess] = useState(false);
 
@@ -41,6 +43,67 @@ export default function PaintShop({
 
     const [previewColor, setPreviewColor] = useState(carColor);
     const [previewFinish, setPreviewFinish] = useState(carFinish);
+    const [applyGlobally, setApplyGlobally] = useState(false);
+
+    const updateGlobalTheme = (color) => {
+        let themeColor = color;
+        // Handle Black -> Gray mapping
+        if (color.toLowerCase() === '#000000') themeColor = '#9ca3af'; // gray-400
+        if (color.toLowerCase() === '#ffffff') themeColor = '#ffffff';
+
+        // Helper to convert hex to rgb for opacity handling
+        const hexToRgb = (hex) => {
+            let r, g, b;
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else {
+                r = parseInt(hex.substring(1, 3), 16);
+                g = parseInt(hex.substring(3, 5), 16);
+                b = parseInt(hex.substring(5, 7), 16);
+            }
+            return `${r}, ${g}, ${b}`;
+        };
+
+        const rgb = hexToRgb(themeColor);
+        const styleId = 'dynamic-theme-styles';
+        let style = document.getElementById(styleId);
+        if (!style) {
+            style = document.createElement('style');
+            style.id = styleId;
+            document.head.appendChild(style);
+        }
+
+        style.textContent = `
+            .text-red-400, .text-red-500, .text-red-600, .text-red-700 { color: ${themeColor} !important; }
+            .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700 { background-color: ${themeColor} !important; }
+            .border-red-400, .border-red-500, .border-red-600, .border-red-500\\/20, .border-red-500\\/30, .border-red-500\\/50 { border-color: ${themeColor} !important; }
+            .from-red-400, .from-red-500, .from-red-600 { --tw-gradient-from: ${themeColor} !important; }
+            .to-red-400, .to-red-500, .to-red-600 { --tw-gradient-to: ${themeColor} !important; }
+            .via-red-400, .via-red-500, .via-red-600 { --tw-gradient-via: ${themeColor} !important; }
+            
+            /* Opacity variants */
+            .bg-red-500\\/5 { background-color: rgba(${rgb}, 0.05) !important; }
+            .bg-red-500\\/10, .bg-red-900\\/20 { background-color: rgba(${rgb}, 0.1) !important; }
+            .bg-red-500\\/20, .bg-red-600\\/20 { background-color: rgba(${rgb}, 0.2) !important; }
+            .bg-red-500\\/30 { background-color: rgba(${rgb}, 0.3) !important; }
+            .bg-red-500\\/50 { background-color: rgba(${rgb}, 0.5) !important; }
+            
+            /* Shadows */
+            .shadow-red-500\\/50, .shadow-red-900\\/40 { --tw-shadow-color: ${themeColor} !important; }
+            
+            /* Selection */
+            ::selection { background-color: ${themeColor}; color: black; }
+            
+            /* Range Sliders */
+            input[type="range"]::-webkit-slider-thumb { background-color: ${themeColor} !important; border-color: white !important; }
+            input[type="range"]::-moz-range-thumb { background-color: ${themeColor} !important; border-color: white !important; }
+            
+            /* Scrollbars */
+            ::-webkit-scrollbar-thumb { background-color: ${themeColor} !important; }
+        `;
+    };
 
     const { playColorSuccess, playClick } = useAudio();
 
@@ -138,16 +201,28 @@ export default function PaintShop({
         setHue(0);
         setSaturation(100);
         setLightness(50);
-        // We do NOT reset rainbowState so they don't have to verify again this session
+        // Reset global theme to red
+        updateGlobalTheme('#dc2626');
+        if (setThemeColor) setThemeColor('#dc2626');
         playClick();
     };
 
     const handleApplyPaint = () => {
+        // Apply updates
+        if (previewColor !== carColor) setCarColor(previewColor);
+        if (previewFinish !== carFinish) setCarFinish(previewFinish);
+
+        // Update refs
         savedColorRef.current = previewColor;
         savedFinishRef.current = previewFinish;
         savedEffectRef.current = specialEffect;
-        setCarColor(previewColor);
-        setCarFinish(previewFinish);
+
+        // Apply Global Theme if enabled
+        if (applyGlobally) {
+            updateGlobalTheme(previewColor);
+            if (setThemeColor) setThemeColor(previewColor); // Persist to backend
+        }
+
         playColorSuccess();
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
@@ -361,12 +436,25 @@ export default function PaintShop({
 
                 {/* Footer - Compact & Inline */}
                 <div className="pt-2 space-y-3">
+                    {/* Apply Globally Toggle */}
+                    <button
+                        onClick={() => setApplyGlobally(!applyGlobally)}
+                        className={`w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${applyGlobally
+                            ? 'bg-white/10 border-white text-white'
+                            : 'bg-transparent border-white/10 text-gray-500 hover:text-white'
+                            }`}
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    >
+                        <Globe size={12} />
+                        {applyGlobally ? 'Apply Globally: ON' : 'Apply Globally: OFF'}
+                    </button>
+
                     <button
                         onClick={handleApplyPaint}
                         disabled={!hasPendingChanges}
                         className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-2
                             ${hasPendingChanges
-                                ? 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/40 translate-y-[-1px]'
+                                ? 'bg-red-600 hover:bg-red-500 text-white translate-y-[-1px]'
                                 : 'bg-red-900/20 text-red-500/50 cursor-default'}`}
                         style={{ fontFamily: 'Orbitron, sans-serif' }}
                     >
@@ -378,7 +466,7 @@ export default function PaintShop({
                         className="w-full text-center text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 hover:text-red-400 transition-colors py-2 flex items-center justify-center gap-2"
                         style={{ fontFamily: 'Orbitron, sans-serif' }}
                     >
-                        Reset Stock
+                        Reset
                     </button>
                 </div>
             </div>

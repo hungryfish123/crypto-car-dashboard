@@ -10,9 +10,9 @@ const generateReferralCode = () => {
     return code;
 };
 
-// Default initial state for new users
 const DEFAULT_USER_DATA = {
     car_color: '#FF0000',
+    theme_color: '#dc2626', // Red-600 (default accent)
     inventory: [],
     equipped_parts: {
         Engines: null,
@@ -130,6 +130,7 @@ export const saveUserData = async (walletAddress, gameState) => {
             .from('player_data')
             .update({
                 car_color: gameState.carColor,
+                theme_color: gameState.themeColor,
                 inventory: gameState.inventory,
                 equipped_parts: gameState.equipped_parts, // Fixed: was equippedParts
                 cash: gameState.cash,
@@ -231,5 +232,36 @@ export const createProfile = async (walletAddress, username) => {
     } catch (err) {
         console.error('Error saving username to player_data:', err);
         throw err;
+    }
+};
+
+// =========================================
+// Unlock Car System (No Burn)
+// =========================================
+export const unlockCar = async (walletAddress, carId) => {
+    if (!isSupabaseConfigured || !supabase) return { success: false, error: 'DB not configured' };
+
+    try {
+        // We are using the 'user_unlocks' table (as per reverted schema)
+        const { error } = await supabase
+            .from('user_unlocks')
+            .insert([
+                { user_wallet: walletAddress, car_id: carId }
+            ]);
+
+        if (error) {
+            // Check for duplicate key violation (already unlocked)
+            if (error.code === '23505') {
+                return { success: true, message: 'Already unlocked' };
+            }
+            console.error('[DB] Error unlocking car:', error);
+            throw error;
+        }
+
+        console.log(`[DB] Car ${carId} unlocked for ${walletAddress}`);
+        return { success: true };
+    } catch (err) {
+        console.error('Unlock car failed:', err);
+        return { success: false, error: err.message };
     }
 };

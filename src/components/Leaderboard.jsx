@@ -98,11 +98,11 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
             {/* Full-page Glassmorphism Backdrop */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-none"></div>
 
-            {/* Cyber-Grid Background Overlay - More visible red */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#dc262615_1px,transparent_1px),linear-gradient(to_bottom,#dc262615_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none"></div>
+            {/* Cyber-Grid Background Overlay - White 10% opacity */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff80_1px,transparent_1px),linear-gradient(to_bottom,#ffffff80_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none opacity-10"></div>
 
             {/* Header */}
-            <div className="relative flex items-center justify-between h-20 px-8 z-10 w-full bg-black/70 backdrop-blur-xl border-b border-red-500/20">
+            <div className="relative flex items-center justify-between h-[5.5rem] px-8 z-10 w-full bg-black/70 backdrop-blur-xl">
                 {/* Left: Back + Logo */}
                 <div className="flex items-center gap-6">
                     <button
@@ -117,12 +117,12 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
                 </div>
 
                 {/* Center: Title */}
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                    <h1
-                        className="text-2xl font-bold uppercase tracking-[0.3em] text-white"
-                        style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 group cursor-default">
+                    <h1 className="text-2xl font-bold uppercase tracking-[0.3em] text-white relative" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                         LEADERBOARD
+                        <span className="absolute inset-0 text-red-600 overflow-hidden w-0 group-hover:w-full transition-[width] duration-500 ease-out" aria-hidden="true">
+                            LEADERBOARD
+                        </span>
                     </h1>
                 </div>
 
@@ -130,14 +130,17 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
                 <div className="flex items-center gap-4">
                     <LoginButton onProfileClick={onProfileClick} />
                 </div>
+
+                {/* Bottom Gradient Fade */}
+                <div className="absolute top-full left-0 w-full h-8 bg-gradient-to-b from-black/50 to-transparent pointer-events-none"></div>
             </div>
 
             {/* Main Content Container - With visible border */}
-            <div className="relative flex-1 flex justify-center px-8 py-6">
+            <div className="relative flex-1 flex justify-center px-8 py-6 overflow-hidden">
                 {/* Leaderboard Box with border */}
-                <div className="relative w-full max-w-5xl h-full bg-black/40 backdrop-blur-sm border border-red-500/30 rounded-xl overflow-hidden">
+                <div className="relative w-full max-w-5xl h-full bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/50">
                     {/* Scrollable Content Area */}
-                    <div className="h-full overflow-y-auto px-6 py-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-red-500 [&::-webkit-scrollbar-thumb]:rounded-full">
+                    <div className="h-full overflow-y-auto px-6 py-4 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-red-500 [&::-webkit-scrollbar-thumb]:rounded-full">
                         {/* Column Headers */}
                         <div className="grid grid-cols-12 gap-4 px-4 py-3 text-xs text-red-500 uppercase tracking-widest font-bold mb-4 border-b border-red-500/20" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                             <div className="col-span-1">Rank</div>
@@ -167,8 +170,10 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
                                     // Real users
                                     leaderboard.forEach((player, index) => {
                                         const rank = index + 1;
-                                        const isCurrentUser = currentWallet && player.user_wallet.toLowerCase() === currentWallet.toLowerCase();
-                                        const displayName = player.username || shortenAddress(player.user_wallet);
+                                        // Use wallet_id from the view
+                                        const wallet = player.wallet_id || player.user_wallet;
+                                        const isCurrentUser = currentWallet && wallet && wallet.toLowerCase() === currentWallet.toLowerCase();
+                                        const displayName = player.username || shortenAddress(wallet);
                                         const feesEarned = parseFloat(player.fees_earned) || 0;
                                         const carsCount = player.cars_count || 1; // Default 1 (BMW starter)
                                         const partsCount = player.parts_count || 0;
