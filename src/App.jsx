@@ -224,6 +224,11 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
     let hasMesh = false;
     scene.traverse((child) => {
       if (child.isMesh) {
+        // EXCEPTION: Clone material for Object_85 so it doesn't share updates with others
+        if (child.name === 'Object_85' && child.material) {
+          child.material = child.material.clone();
+        }
+
         box.expandByObject(child);
         hasMesh = true;
       }
@@ -308,15 +313,16 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
   }, [scene]);
 
   // Apply silhouette or restore based on ownership
-  // Apply silhouette or restore based on ownership
   useEffect(() => {
     if (!isOwned) {
       applySilhouette();
       revealState.current = 'idle';
     } else if (prevIsOwned.current === false && isOwned === true) {
-      // Start Burn Reveal Animation
-      revealState.current = 'heating';
+      // Car unlocked - restore materials immediately (no glow animation)
+      restoreOriginalMaterials();
+      revealState.current = 'idle';
       glowIntensity.current = 0;
+      scaleRef.current = 1.1; // Small bounce effect only
     }
     prevIsOwned.current = isOwned;
   }, [isOwned, applySilhouette, restoreOriginalMaterials]);
@@ -334,18 +340,34 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
     });
 
     scene.traverse((child) => {
-      // Use effectiveTargetNames instad of hardcoded targetNames
+      // Use effectiveTargetNames instead of hardcoded targetNames
       if (child.isMesh && child.material) {
-        // Strict match check
-        if (effectiveTargetNames.includes(child.name)) {
-          // console.log('Applying color to:', child.name);
-          // Ensure material is not an array (MultiMaterial)
-          const material = Array.isArray(child.material) ? child.material[0] : child.material;
+        // Get material(s) to check
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+
+        // Check if mesh name OR any material name matches targetNames
+        const meshNameMatches = effectiveTargetNames.includes(child.name);
+        const materialNameMatches = materials.some(mat => mat.name && effectiveTargetNames.includes(mat.name));
+
+        if (meshNameMatches || materialNameMatches) {
+          // EXCEPTION: Mazda MX-5 Object_85 should not change color (User Request)
+          if (child.name === 'Object_85') {
+            return;
+          }
+
+          console.log('Applying color to:', child.name, 'Material:', materials[0]?.name, 'Targets:', effectiveTargetNames);
+          const material = materials[0];
 
           if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
             // Only apply standard color if NO special effect is active, or if this call is restoring state
             if (!specialEffect) {
               material.color.set(color);
+
+              // FIX: Disable texture map if present, as it likely contains a baked color that interferes with tinting
+              if (material.map) {
+                material.map = null;
+                material.needsUpdate = true;
+              }
 
               // CRITICAL: Force emissive OFF to prevent glow effect on bright colors
               material.emissive.set('#000000');
@@ -636,6 +658,8 @@ function App() {
   const [earningRate, setEarningRate] = useState(0.00001);
 
   const [specialEffect, setSpecialEffect] = useState(null); // 'rainbow', 'galaxy', or null
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // Validates when data is fully synchronized
+  const [userTokenBalances, setUserTokenBalances] = useState({}); // Map of contract address -> balance
 
   // Global Theme Utility - Apply saved theme on load
   const applyGlobalThemeFromColor = (color) => {
@@ -690,7 +714,22 @@ function App() {
   const [currentCarModelIndex, setCurrentCarModelIndex] = useState(0);
   const [isModelTransitioning, setIsModelTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState(1); // 1 = Next, -1 = Prev
-  const [ownedCars, setOwnedCars] = useState(['bmw_m3_e30']); // Array of owned car IDs
+
+  // Owned cars - Load from localStorage for instant display, then verify with Supabase
+  const [ownedCars, setOwnedCarsState] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_owned_cars');
+      return cached ? JSON.parse(cached) : ['bmw_m3_e30'];
+    } catch { return ['bmw_m3_e30']; }
+  });
+
+  // Wrapper setter that also caches to localStorage
+  const setOwnedCars = (newValue) => {
+    const value = typeof newValue === 'function' ? newValue(ownedCars) : newValue;
+    setOwnedCarsState(value);
+    try { localStorage.setItem('cached_owned_cars', JSON.stringify(value)); } catch { }
+  };
+
   const [itemMappings, setItemMappings] = useState({}); // Map of itemId -> Contract Address
 
   // Get current car model info
@@ -803,6 +842,32 @@ function App() {
     playSuccess();
   };
 
+  // Manual unlock handler - called when user clicks "Unlock" while holding tokens
+  const handleManualUnlock = async (carId) => {
+    console.log('[ManualUnlock] Unlocking car:', carId);
+
+    // Add to owned cars
+    setOwnedCars(prev => {
+      if (!prev.includes(carId)) {
+        return [...prev, carId];
+      }
+      return prev;
+    });
+
+    // Persist to database
+    const walletAddress = user?.wallet?.address;
+    if (walletAddress) {
+      try {
+        await unlockCar(walletAddress, carId);
+        console.log('[ManualUnlock] Car unlock persisted to database');
+      } catch (err) {
+        console.warn('[ManualUnlock] Failed to persist unlock:', err);
+      }
+    }
+
+    playSuccess();
+  };
+
   // Auth
   // (usePrivy moved to top of App)
 
@@ -855,8 +920,22 @@ function App() {
   const [draggedItem, setDraggedItem] = useState(null);
   const [actionTrigger, setActionTrigger] = useState(0);
 
-  // Inventory State (purchased items)
-  const [inventory, setInventory] = useState([]);
+  // Inventory State (purchased items) - Load from localStorage for instant display
+  const [inventory, setInventoryState] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_inventory');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  });
+
+  // Wrapper setter that also caches to localStorage
+  const setInventory = (newInventory) => {
+    const value = typeof newInventory === 'function'
+      ? newInventory(inventory)
+      : newInventory;
+    setInventoryState(value);
+    try { localStorage.setItem('cached_inventory', JSON.stringify(value)); } catch { }
+  };
 
   // Equipped Parts State
   // Equipped Parts Map State (carId -> parts object)
@@ -992,35 +1071,44 @@ function App() {
     });
   };
 
-  // Car Customization State
-  const [carColor, setCarColor] = useState('#FF0000'); // Initial Red
-  const [themeColor, setThemeColor] = useState('#dc2626'); // Global accent color
+  // Car Customization State - Single Global Color for All Cars
+  // Initialize from localStorage for instant visual (no flash), then Supabase will override if different
+  const [carColor, setCarColorState] = useState(() => {
+    try {
+      return localStorage.getItem('cached_car_color') || '#FF0000';
+    } catch { return '#FF0000'; }
+  });
+  const [themeColor, setThemeColorState] = useState(() => {
+    try {
+      return localStorage.getItem('cached_theme_color') || '#dc2626';
+    } catch { return '#dc2626'; }
+  });
   const [carFinish, setCarFinish] = useState('glossy'); // 'glossy', 'matte', 'metallic'
   const [activeTab, setActiveTab] = useState('color'); // 'color', 'finish'
 
-  // HSL State for color picker
+  // Wrapper setters that also cache to localStorage
+  const setCarColor = (color) => {
+    setCarColorState(color);
+    try { localStorage.setItem('cached_car_color', color); } catch { }
+  };
+  const setThemeColor = (color) => {
+    setThemeColorState(color);
+    try { localStorage.setItem('cached_theme_color', color); } catch { }
+  };
+
+  // Apply cached theme CSS on initial mount (before Supabase loads)
+  useEffect(() => {
+    if (themeColor && themeColor !== '#dc2626') {
+      applyGlobalThemeFromColor(themeColor);
+    }
+  }, []); // Run once on mount
+
+  // HSL State for color picker (used by PaintShop, sync happens there)
   const [hue, setHue] = useState(0);
   const [saturation, setSaturation] = useState(100);
   const [lightness, setLightness] = useState(50);
-
-  // Sync HSL to hex when sliders change
-  useEffect(() => {
-    const h = Number(hue);
-    const s = Number(saturation) / 100;
-    const l = Number(lightness) / 100;
-    const c = (1 - Math.abs(2 * l - 1)) * s;
-    const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-    const m = l - c / 2;
-    let r = 0, g = 0, b = 0;
-    if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
-    else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
-    else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
-    else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
-    else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
-    else { r = c; g = 0; b = x; }
-    const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
-    setCarColor('#' + toHex(r) + toHex(g) + toHex(b));
-  }, [hue, saturation, lightness]);
+  // NOTE: HSL->hex conversion removed from here. It now only happens in PaintShop
+  // when user actively changes sliders, preventing the saved color from being overwritten.
 
   // Earnings Ticker
   // Supabase Integration
@@ -1074,11 +1162,16 @@ function App() {
             localStorage.removeItem('pending_referral');
             console.log('Cleared pending referral:', pendingReferral);
           }
+          // Load global car color
           setCarColor(data.car_color || '#FF0000');
-          // Apply saved theme on load
+          // Apply saved theme on load (car color IS the theme now)
           if (data.theme_color) {
             setThemeColor(data.theme_color);
             applyGlobalThemeFromColor(data.theme_color);
+          } else if (data.car_color) {
+            // If no theme_color, use car_color as theme
+            setThemeColor(data.car_color);
+            applyGlobalThemeFromColor(data.car_color);
           }
 
           // ==============================================
@@ -1158,6 +1251,18 @@ function App() {
                   } else {
                     const tokens = await response.json();
                     console.log('[WalletSync] Found', tokens.length, 'SPL tokens in wallet');
+
+                    // Build token balances map for all tokens (for unlock button)
+                    const balancesMap = {};
+                    for (const token of tokens) {
+                      const mint = token.mint?.toLowerCase();
+                      const balance = parseFloat(token.amount) || 0;
+                      if (mint && balance > 0) {
+                        balancesMap[mint] = balance;
+                      }
+                    }
+                    setUserTokenBalances(balancesMap);
+                    console.log('[WalletSync] Token balances:', balancesMap);
 
                     // 4. Check each token against our mappings
                     const existingIds = new Set(mergedInventory.map(item => item.id || item.item_id));
@@ -1242,6 +1347,7 @@ function App() {
           console.log('💰 [App] Loaded Pending Rewards:', pending);
           setPendingRewards(pending);
           setReferralEarnings(Number(data.referral_earnings) || 0);
+          setIsDataLoaded(true); // Enable auto-save now that data is loaded
         }
       }
     };
@@ -1254,6 +1360,13 @@ function App() {
     // Don't save in demo mode
     if (demoMode) {
       console.log('🔧 Demo mode - save skipped');
+      return;
+    }
+
+    // CRITICAL: Prevent saving until initial data load is complete
+    // This avoids overwriting user data with default state on login
+    if (!isDataLoaded) {
+      // console.log('⏳ Waiting for data load before saving...');
       return;
     }
 
@@ -1274,7 +1387,7 @@ function App() {
         netWorth: currentNetWorth
       });
     }
-  }, [carColor, themeColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode]);
+  }, [carColor, themeColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode, isDataLoaded]);
 
 
   const handleConnectWallet = () => {
@@ -1348,6 +1461,9 @@ function App() {
           onPurchase={handleCarPurchase}
           walletAddress={user?.wallet?.address}
           tokenMappings={itemMappings}
+          carColor={carColor}
+          onUnlock={handleManualUnlock}
+          userTokenBalances={userTokenBalances}
         />
       )}
 
@@ -1477,6 +1593,7 @@ function App() {
                 onProfileClick={() => setActivePage('Profile')}
                 initialSelectedItem={initialSelectedItem}
                 clearInitialItem={() => setInitialSelectedItem(null)}
+                carColor={carColor}
               />
             </div>
           </motion.div>
@@ -1578,6 +1695,7 @@ function App() {
         <Leaderboard
           onBack={() => setActivePage('Garage')}
           onProfileClick={() => setActivePage('Profile')}
+          carColor={carColor}
         />
       )}
 

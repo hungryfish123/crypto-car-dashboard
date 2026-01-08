@@ -132,7 +132,7 @@ export const saveUserData = async (walletAddress, gameState) => {
                 car_color: gameState.carColor,
                 theme_color: gameState.themeColor,
                 inventory: gameState.inventory,
-                equipped_parts: gameState.equipped_parts, // Fixed: was equippedParts
+                equipped_parts: gameState.equipped_parts,
                 cash: gameState.cash,
                 net_worth: gameState.netWorth
             })

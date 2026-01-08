@@ -157,7 +157,7 @@ function DockLabel({ children, className, ...rest }) {
                         className
                     )}
                     role='tooltip'
-                    style={{ fontFamily: 'Rajdhani, sans-serif', x: '-50%' }}
+                    style={{ fontFamily: 'Orbitron, sans-serif', x: '-50%' }}
                 >
                     {children}
                 </motion.div>

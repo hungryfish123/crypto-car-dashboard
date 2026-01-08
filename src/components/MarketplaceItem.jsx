@@ -14,7 +14,8 @@ const MarketplaceItem = ({
     rarityColor = 'bg-gray-500',
     isCrypto = false,
     ca = '',
-    onClick
+    onClick,
+    carColor
 }) => {
     // Map rarity level to specific colors
     const getRarityStyles = (level) => {
@@ -43,11 +44,13 @@ const MarketplaceItem = ({
             {/* Price Badge (Top Right) */}
             {/* Price Badge (Top Right) */}
             <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
-                {isCrypto ? (
+                {price ? (
                     <>
-                        <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
-                        </span>
+                        {isCrypto && (
+                            <span className="flex items-center gap-1 text-[10px] text-green-500 font-bold animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> LIVE
+                            </span>
+                        )}
                         <span className="text-sm font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{price}</span>
                     </>
                 ) : (
@@ -59,7 +62,7 @@ const MarketplaceItem = ({
             </div>
 
             {/* Centered Rarity Badge (Top Center) */}
-            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full ${style.bgColor} text-white shadow-lg`}>
+            <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest rounded-lg ${style.bgColor} text-white shadow-lg border border-white/20`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {style.label}
             </div>
 
@@ -88,54 +91,41 @@ const MarketplaceItem = ({
 
             {/* Slide-Up Hover Overlay (Dark Glass) */}
             <div className="absolute bottom-0 left-0 w-full h-[50%] z-20 bg-black/90 backdrop-blur-xl border-t border-white/10 flex flex-col justify-center items-center p-6 translate-y-[100%] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 ease-out">
-                <div className="grid grid-cols-2 gap-x-6 gap-y-5 w-full">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-5 w-full" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     {/* Supply */}
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 font-semibold">Supply</span>
+                        <span className="text-lg uppercase tracking-widest mb-1 font-bold" style={{ color: carColor || 'white' }}>Supply</span>
                         <div className="flex items-center gap-2">
-                            <Zap size={14} className="text-yellow-500" />
-                            <span className="text-base font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{supply}</span>
+                            <span className="text-xs text-gray-400 font-bold">{supply}</span>
                         </div>
                     </div>
 
                     {/* Holders */}
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 font-semibold">Holders</span>
+                        <span className="text-lg uppercase tracking-widest mb-1 font-bold" style={{ color: carColor || 'white' }}>Holders</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-base font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{holders}</span>
-                            <Users size={14} className="text-gray-500" />
+                            <span className="text-xs text-gray-400 font-bold">{holders}</span>
                         </div>
                     </div>
 
                     {/* Market Cap */}
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 font-semibold">Market Cap</span>
+                        <span className="text-lg uppercase tracking-widest mb-1 font-bold" style={{ color: carColor || 'white' }}>Market Cap</span>
                         <div className="flex items-center gap-2">
-                            <TrendingUp size={14} className="text-green-500" />
-                            <span className="text-base font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{marketCap}</span>
+                            <span className="text-xs text-gray-400 font-bold">{marketCap}</span>
                         </div>
                     </div>
 
                     {/* Yield */}
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 font-semibold">Yield</span>
+                        <span className="text-lg uppercase tracking-widest mb-1 font-bold" style={{ color: carColor || 'white' }}>Yield</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-base font-bold text-green-400" style={{ fontFamily: 'Rajdhani, sans-serif' }}>{cashback}</span>
-                            <Wallet size={14} className="text-gray-500" />
+                            <span className="text-xs text-gray-400 font-bold">{cashback}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* CA Display for Crypto Items */}
-                {isCrypto && ca && (
-                    <div className="mt-4 pt-4 border-t border-white/10 w-full text-center">
-                        <p className="text-[10px] text-gray-500 font-mono mb-1">Contract Address</p>
-                        <div className="text-[10px] text-blue-400 font-mono bg-blue-500/10 rounded px-2 py-1 truncate select-all cursor-text flex items-center justify-center gap-2">
-                            {ca.slice(0, 6)}...{ca.slice(-6)}
-                            <span className="text-[8px] opacity-50">(Click to Copy)</span>
-                        </div>
-                    </div>
-                )}
+
             </div>
         </div>
     );

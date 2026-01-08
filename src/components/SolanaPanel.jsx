@@ -7,7 +7,7 @@ import { useUserRewards } from '../hooks/useUserRewards';
 import { usePrivy } from '@privy-io/react-auth';
 import confetti from 'canvas-confetti';
 
-const SimpleLineChart = ({ data, isPositive }) => {
+const SimpleLineChart = ({ data, isPositive, color }) => {
     if (!data || !data.points || data.points.length < 2) return null;
 
     const points = data.points;
@@ -29,9 +29,10 @@ const SimpleLineChart = ({ data, isPositive }) => {
         return `${x},${y}`;
     }).join(' ');
 
-    // Always red for $GEAR branding
-    const strokeColor = '#ef4444';
-    const glowColor = 'rgba(239, 68, 68, 0.6)';
+    // Dynamic color from prop, default to red
+    const strokeColor = color || '#ef4444';
+    // Use 8-digit hex for glow transparency (approx 60%) or fallback
+    const glowColor = strokeColor.startsWith('#') ? `${strokeColor}99` : strokeColor;
 
     return (
         <div className="w-full mt-3 relative">
@@ -122,7 +123,7 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {} }) => {
+const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { claimRewards, loading: claiming } = useClaimRewards();
     const { user } = usePrivy();
@@ -288,7 +289,7 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
                         {tokenLoading ? (
                             <div className="h-full w-full bg-white/5 animate-pulse rounded-lg"></div>
                         ) : (
-                            chartData && <SimpleLineChart data={chartData} isPositive={chartData.isPositive} />
+                            chartData && <SimpleLineChart data={chartData} isPositive={chartData.isPositive} color={carColor} />
                         )}
                     </div>
                 </div>

@@ -16,6 +16,7 @@ export const CAR_MODELS = [
         topSpeed: '235 km/h',
         model: '/bmw_m3_coupe_e30_1986.glb',
         meshName: 'paint_M3', // For color changing
+        targetNames: ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'],
         isDefault: true
     },
     {
@@ -29,6 +30,7 @@ export const CAR_MODELS = [
         topSpeed: '208 km/h',
         model: '/1992_volkswagen_golf_gti_mk2.glb',
         meshName: 'paint_golf',
+        targetNames: ['car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'],
         locked: true
     },
     {
@@ -42,6 +44,7 @@ export const CAR_MODELS = [
         topSpeed: '250 km/h',
         model: '/1984_audi_sport_quattro.glb',
         meshName: 'paint_audi',
+        targetNames: ['AudiMAT_Audi_S1_Red_Base1'],
         locked: true
     },
     {
@@ -55,6 +58,7 @@ export const CAR_MODELS = [
         topSpeed: '203 km/h',
         model: '/1989_mazda_mx-5.glb',
         meshName: 'paint_mazda',
+        targetNames: ['Vehicle_Exterior_mm_ext'],
         locked: true
     },
     {
@@ -68,11 +72,12 @@ export const CAR_MODELS = [
         topSpeed: '324 km/h',
         model: '/1987_ferrari_f40.glb',
         meshName: 'paint_f40',
+        targetNames: [], // User will provide mesh name
         locked: true
     }
 ];
 
-const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = [], walletAddress, tokenMappings = {} }) => {
+const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = [], walletAddress, tokenMappings = {}, carColor = '#EF4444', onUnlock, userTokenBalances = {} }) => {
 
     // Ensure index is valid
     const safeIndex = (currentModelIndex >= 0 && currentModelIndex < CAR_MODELS.length) ? currentModelIndex : 0;
@@ -84,6 +89,9 @@ const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = []
 
     // Get Contract Address for this car
     const contractAddress = tokenMappings[currentModel.id];
+
+    // Check if user holds tokens for this car
+    const userHoldsTokens = contractAddress && userTokenBalances[contractAddress.toLowerCase()] > 0;
 
     const handleNext = () => {
         const nextIndex = (safeIndex + 1) % CAR_MODELS.length;
@@ -99,7 +107,15 @@ const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = []
         }
     };
 
-    const handleBuy = () => {
+    const handleBuy = async () => {
+        // If user already holds tokens, unlock the car instead of buying
+        if (userHoldsTokens && onUnlock) {
+            console.log('[CarModelSelector] User holds tokens, unlocking car:', currentModel.id);
+            await onUnlock(currentModel.id);
+            return;
+        }
+
+        // Otherwise open buy link
         if (contractAddress) {
             window.open(`https://jup.ag/swap/SOL-${contractAddress}`, '_blank');
         } else {
@@ -119,12 +135,20 @@ const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = []
                     className="mb-2 pointer-events-auto"
                 >
                     {isOwned ? (
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-green-500/50 bg-black/60 backdrop-blur text-green-400 font-bold uppercase tracking-widest text-[10px]">
-                            <Car size={12} /> <span>OWNED</span>
+                        <div className="px-6 py-2 rounded-md border border-green-500/50 bg-green-900/20 backdrop-blur-md text-green-400 font-bold uppercase tracking-[0.2em] text-[10px]" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            OWNED
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-1 rounded-full border border-orange-500/50 bg-black/60 backdrop-blur text-orange-400 font-bold uppercase tracking-widest text-[10px]">
-                            <Lock size={12} /> <span>LOCKED</span>
+                        <div
+                            className="px-6 py-2 rounded-md border backdrop-blur-md font-bold uppercase tracking-[0.2em] text-[10px]"
+                            style={{
+                                fontFamily: 'Orbitron, sans-serif',
+                                borderColor: carColor,
+                                color: carColor,
+                                backgroundColor: `${carColor}20` // 20 hex = ~12% opacity
+                            }}
+                        >
+                            LOCKED
                         </div>
                     )}
                 </motion.div>
@@ -197,7 +221,7 @@ const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = []
                                         : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-gray-700'}
                                 `}
                             >
-                                {contractAddress ? 'UNLOCK CAR' : 'COMING SOON'}
+                                {contractAddress ? 'UNLOCK CAR' : 'BUY TO UNLOCK'}
                             </button>
                             {contractAddress && (
                                 <p className="text-[10px] text-green-400 font-mono mt-2 text-center tracking-wider animate-pulse">

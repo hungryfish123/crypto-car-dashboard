@@ -6,7 +6,7 @@ import { usePrivy } from '@privy-io/react-auth';
 import InteractiveLogo from './InteractiveLogo';
 import LoginButton from './LoginButton';
 
-const Leaderboard = ({ onBack, onProfileClick }) => {
+const Leaderboard = ({ onBack, onProfileClick, carColor }) => {
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
     const { user } = usePrivy();
@@ -112,7 +112,7 @@ const Leaderboard = ({ onBack, onProfileClick }) => {
                         <ArrowLeft size={20} className="text-gray-400 hover:text-white" />
                     </button>
                     <div className="scale-75 origin-left">
-                        <InteractiveLogo />
+                        <InteractiveLogo color={carColor} />
                     </div>
                 </div>
 

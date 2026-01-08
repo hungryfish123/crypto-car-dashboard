@@ -9,7 +9,7 @@ import { supabase } from '../supabaseClient';
 import { useTokenMetrics } from '../hooks/useTokenMetrics';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
-const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clearInitialItem }) => {
+const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clearInitialItem, carColor }) => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [selectedItem, setSelectedItem] = useState(initialSelectedItem || null);
     const [items, setItems] = useState(MARKETPLACE_ITEMS);
@@ -60,13 +60,38 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                 buyUrl: dbMapping.buy_url || null
             };
 
-            // Apply metrics if available
+            // Apply metrics if available, otherwise default to 0/empty as requested
+            let displayPrice = null;
+            let displaySupply = item.supply;
+
+            // Clean supply string: "1000/1000" -> "1000"
+            if (item.supply && item.supply.includes('/')) {
+                displaySupply = item.supply.split('/')[1];
+            }
+
+            if (metrics && metrics.price > 0) {
+                displayPrice = `$${metrics.price.toFixed(6)}`;
+            } else if (item.price && !item.price.includes('CR')) {
+                // Keep non-CR prices (like '10 Tokens')
+                displayPrice = item.price;
+            }
+
             if (metrics) {
                 mergedItem = {
                     ...mergedItem,
-                    price: metrics.price > 0 ? `$${metrics.price.toFixed(6)}` : item.price,
-                    marketCap: metrics.marketCap > 0 ? `$${(metrics.marketCap / 1000).toFixed(1)}k` : item.marketCap,
-                    holders: metrics.holderCount || item.holders
+                    price: displayPrice,
+                    supply: displaySupply,
+                    marketCap: metrics.marketCap > 0 ? `$${(metrics.marketCap / 1000).toFixed(1)}k` : "$0",
+                    holders: metrics.holderCount || 0
+                };
+            } else {
+                // If no metrics fetched, override hardcoded values
+                mergedItem = {
+                    ...mergedItem,
+                    price: displayPrice,
+                    supply: displaySupply,
+                    marketCap: "$0",
+                    holders: 0
                 };
             }
 
@@ -158,7 +183,7 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                 {/* Left: Logos */}
                 <div className="flex items-center gap-3">
                     <div className="scale-90 origin-left">
-                        <InteractiveLogo />
+                        <InteractiveLogo color={carColor} />
                     </div>
 
                     {/* X Logo with hover effect */}
@@ -208,7 +233,7 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
 
             {/* Main Grid Content */}
             <motion.div
-                className="flex-1 overflow-y-auto w-full max-w-[1920px] mx-auto custom-scrollbar px-8 pb-24 pt-8"
+                className="flex-1 overflow-y-auto w-full max-w-[1920px] mx-auto marketplace-scrollbar px-8 pb-24 pt-8"
                 variants={containerVariants}
                 initial="hidden"
                 animate="show"
@@ -230,14 +255,20 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                                 isCrypto={item.isCrypto || false}
                                 ca={item.ca || ''}
                                 onClick={() => setSelectedItem(item)}
+                                carColor={carColor}
                             />
                         </motion.div>
                     ))}
 
                     {/* FILLER LOGIC: Fill grid with "Dropping Soon" teasers */}
                     {(() => {
-                        const targetCount = activeCategory === 'All' ? 12 : 4;
-                        const fillerCount = Math.max(0, targetCount - filteredItems.length);
+                        // Always show at least one full row of teasers to indicate upcoming content
+                        const columns = 4; // Assuming max columns (2xl)
+                        const minFillers = 4;
+
+                        // Calculate total items needed to fill current row + add one full row
+                        const totalNeeded = Math.ceil((filteredItems.length + minFillers) / columns) * columns;
+                        const fillerCount = totalNeeded - filteredItems.length;
 
                         return Array.from({ length: fillerCount }).map((_, i) => {
                             // Deterministic rarity based on index to avoid flicker
@@ -257,7 +288,10 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                                     className="group relative bg-[#0a0a0a]/80 backdrop-blur-md rounded-xl overflow-hidden shadow-xl flex flex-col h-[420px] border border-white/5 opacity-80 hover:opacity-100 transition-opacity duration-300"
                                 >
                                     {/* Fake Rarity Badge */}
-                                    <div className={`absolute top-4 left-1/2 -translate-x-1/2 z-10 px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full ${rarity.bg} text-white shadow-lg`}>
+                                    <div
+                                        className={`absolute top-4 left-1/2 -translate-x-1/2 z-10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest rounded-lg ${rarity.bg} text-white shadow-lg border border-white/20`}
+                                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                                    >
                                         {rarity.label}
                                     </div>
 

@@ -250,7 +250,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                     <div className="flex flex-col items-center text-center">
                         {/* Interactive Gear Logo */}
                         <div className="mb-3">
-                            <InteractiveLogo />
+                            <InteractiveLogo color={carColor} />
                         </div>
 
                         <div className="relative mb-3">
@@ -287,7 +287,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                         </div>
 
                         {/* X Profile Link Section */}
-                        {isAuthenticated && (
+                        {isAuthenticated && walletAddress && (
                             <div className="mt-4">
                                 {xProfile ? (
                                     // Connected - Show clickable link with animation
@@ -370,8 +370,8 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                                 className={`w-full py-3 rounded-xl text-lg font-bold uppercase tracking-[0.15em] transition-all duration-300 ${claimSuccess
                                     ? 'bg-green-500 text-white'
                                     : pendingRewards > 0
-                                        ? 'bg-[#DC2626] text-white hover:bg-[#B91C1C]'
-                                        : 'bg-[#DC2626] text-white'
+                                        ? 'bg-red-600 text-white hover:bg-red-700'
+                                        : 'bg-red-600 text-white'
                                     }`}
                                 style={orbitronFont}
                             >

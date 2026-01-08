@@ -40,20 +40,36 @@ export default function PaintShop({
     const savedColorRef = useRef(carColor);
     const savedFinishRef = useRef(carFinish);
     const savedEffectRef = useRef(specialEffect);
+    const hasUserInteracted = useRef(false); // Track if user has changed sliders
 
     const [previewColor, setPreviewColor] = useState(carColor);
     const [previewFinish, setPreviewFinish] = useState(carFinish);
-    const [applyGlobally, setApplyGlobally] = useState(false);
+
+    // Sync preview state with actual car color when it changes from parent (e.g. on mount)
+    // This ensures we start with the correct saved color
+    useEffect(() => {
+        if (!hasUserInteracted.current) {
+            setPreviewColor(carColor);
+            savedColorRef.current = carColor;
+        }
+    }, [carColor]);
+
+    useEffect(() => {
+        if (!hasUserInteracted.current) {
+            setPreviewFinish(carFinish);
+            savedFinishRef.current = carFinish;
+        }
+    }, [carFinish]);
 
     const updateGlobalTheme = (color) => {
         let themeColor = color;
-        // Handle Black -> Gray mapping
+        // Handle Black -> Gray mapping for visibility
         if (color.toLowerCase() === '#000000') themeColor = '#9ca3af'; // gray-400
         if (color.toLowerCase() === '#ffffff') themeColor = '#ffffff';
 
-        // Helper to convert hex to rgb for opacity handling
-        const hexToRgb = (hex) => {
-            let r, g, b;
+        // Helper to convert hex to rgb
+        const hexToRgbVals = (hex) => {
+            let r = 0, g = 0, b = 0;
             if (hex.length === 4) {
                 r = parseInt(hex[1] + hex[1], 16);
                 g = parseInt(hex[2] + hex[2], 16);
@@ -63,10 +79,16 @@ export default function PaintShop({
                 g = parseInt(hex.substring(3, 5), 16);
                 b = parseInt(hex.substring(5, 7), 16);
             }
-            return `${r}, ${g}, ${b}`;
+            return { r, g, b };
         };
 
-        const rgb = hexToRgb(themeColor);
+        const { r, g, b } = hexToRgbVals(themeColor);
+        const rgbString = `${r}, ${g}, ${b}`;
+
+        // Calculate YIQ contrast
+        const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+        const textColor = (yiq >= 128) ? '#000000' : '#FFFFFF';
+
         const styleId = 'dynamic-theme-styles';
         let style = document.getElementById(styleId);
         if (!style) {
@@ -77,24 +99,41 @@ export default function PaintShop({
 
         style.textContent = `
             .text-red-400, .text-red-500, .text-red-600, .text-red-700 { color: ${themeColor} !important; }
-            .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700 { background-color: ${themeColor} !important; }
+            
+            /* Backgrounds needing potential text contrast adjustment */
+            .bg-red-400, .bg-red-500, .bg-red-600, .bg-red-700 { 
+                background-color: ${themeColor} !important; 
+                color: ${textColor} !important;
+            }
+            
+            /* Buttons specifically might need explicit color overrides if they use text-white */
+            button.bg-red-600, button.bg-red-500, .group.bg-red-600 {
+                color: ${textColor} !important;
+            }
+
+            /* Fix Icon Contrast - If text is black, remove white invert filter */
+            button.bg-red-600 img, button.bg-red-500 img {
+                filter: ${textColor === '#000000' ? 'brightness(0)' : 'brightness(0) invert(1)'} !important;
+                opacity: 0.8;
+            }
+
             .border-red-400, .border-red-500, .border-red-600, .border-red-500\\/20, .border-red-500\\/30, .border-red-500\\/50 { border-color: ${themeColor} !important; }
             .from-red-400, .from-red-500, .from-red-600 { --tw-gradient-from: ${themeColor} !important; }
             .to-red-400, .to-red-500, .to-red-600 { --tw-gradient-to: ${themeColor} !important; }
             .via-red-400, .via-red-500, .via-red-600 { --tw-gradient-via: ${themeColor} !important; }
             
             /* Opacity variants */
-            .bg-red-500\\/5 { background-color: rgba(${rgb}, 0.05) !important; }
-            .bg-red-500\\/10, .bg-red-900\\/20 { background-color: rgba(${rgb}, 0.1) !important; }
-            .bg-red-500\\/20, .bg-red-600\\/20 { background-color: rgba(${rgb}, 0.2) !important; }
-            .bg-red-500\\/30 { background-color: rgba(${rgb}, 0.3) !important; }
-            .bg-red-500\\/50 { background-color: rgba(${rgb}, 0.5) !important; }
+            .bg-red-500\\/5 { background-color: rgba(${rgbString}, 0.05) !important; }
+            .bg-red-500\\/10, .bg-red-900\\/20 { background-color: rgba(${rgbString}, 0.1) !important; }
+            .bg-red-500\\/20, .bg-red-600\\/20 { background-color: rgba(${rgbString}, 0.2) !important; }
+            .bg-red-500\\/30 { background-color: rgba(${rgbString}, 0.3) !important; }
+            .bg-red-500\\/50 { background-color: rgba(${rgbString}, 0.5) !important; }
             
             /* Shadows */
             .shadow-red-500\\/50, .shadow-red-900\\/40 { --tw-shadow-color: ${themeColor} !important; }
             
             /* Selection */
-            ::selection { background-color: ${themeColor}; color: black; }
+            ::selection { background-color: ${themeColor}; color: ${textColor}; }
             
             /* Range Sliders */
             input[type="range"]::-webkit-slider-thumb { background-color: ${themeColor} !important; border-color: white !important; }
@@ -156,6 +195,7 @@ export default function PaintShop({
     };
 
     const handlePresetClick = (color) => {
+        hasUserInteracted.current = true; // Mark as user interaction
         setPreviewColor(color);
         setSpecialEffect(null);
         const { h, s, l } = hexToHSL(color);
@@ -184,6 +224,7 @@ export default function PaintShop({
     };
 
     const handleFinishClick = (finishId) => {
+        hasUserInteracted.current = true; // Mark as user interaction
         setPreviewFinish(finishId);
         playClick();
     };
@@ -217,18 +258,20 @@ export default function PaintShop({
         savedFinishRef.current = previewFinish;
         savedEffectRef.current = specialEffect;
 
-        // Apply Global Theme if enabled
-        if (applyGlobally) {
-            updateGlobalTheme(previewColor);
-            if (setThemeColor) setThemeColor(previewColor); // Persist to backend
-        }
+        // ALWAYS apply global theme (car color = global theme)
+        updateGlobalTheme(previewColor);
+        if (setThemeColor) setThemeColor(previewColor);
 
         playColorSuccess();
         setShowSuccess(true);
         setTimeout(() => setShowSuccess(false), 2000);
     };
 
+    // HSL to Hex conversion - ONLY when user actively changes sliders
     useEffect(() => {
+        // Skip on initial mount - only run when user interacts with sliders
+        if (!hasUserInteracted.current) return;
+
         const h = Number(hue);
         const s = Number(saturation) / 100;
         const l = Number(lightness) / 100;
@@ -247,10 +290,19 @@ export default function PaintShop({
         setPreviewColor(hex);
     }, [hue, saturation, lightness]);
 
+    // Live preview: sync previewColor to actual car color for real-time feedback
+    // Only when user is actively previewing (hasUserInteracted)
     useEffect(() => {
-        setCarColor(previewColor);
-        setCarFinish(previewFinish);
-    }, [previewColor, previewFinish, setCarColor, setCarFinish]);
+        if (hasUserInteracted.current) {
+            setCarColor(previewColor);
+        }
+    }, [previewColor, setCarColor]);
+
+    useEffect(() => {
+        if (hasUserInteracted.current) {
+            setCarFinish(previewFinish);
+        }
+    }, [previewFinish, setCarFinish]);
 
     const sliderThumbStyle = `
         [&::-webkit-slider-thumb]:appearance-none
@@ -301,57 +353,76 @@ export default function PaintShop({
                             <button
                                 key={color}
                                 onClick={() => handlePresetClick(color)}
-                                className={`aspect-square rounded-full transition-all duration-200 ${previewColor.toUpperCase() === color.toUpperCase() && !specialEffect
-                                    ? 'ring-2 ring-offset-2 ring-offset-black ring-red-500 scale-110'
-                                    : 'border border-white/10 hover:border-white/30'
+                                className={`aspect-square rounded-full transition-all duration-300 relative overflow-hidden group flex items-center justify-center ${previewColor.toUpperCase() === color.toUpperCase() && !specialEffect
+                                    ? 'scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50'
+                                    : 'border border-white/10 hover:border-white/30 hover:scale-105'
                                     }`}
                                 style={{ backgroundColor: color }}
                                 title={color}
-                            />
+                            >
+                                {previewColor.toUpperCase() === color.toUpperCase() && !specialEffect && (
+                                    <div className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center w-full h-full">
+                                        <Check size={20} className="text-white filter drop-shadow-md" strokeWidth={4} />
+                                    </div>
+                                )}
+                            </button>
                         ))}
                     </div>
 
                     {/* HSL Sliders */}
                     <div className={`space-y-4 transition-opacity duration-300 ${specialEffect ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                        <style>{`
+                            .custom-slider::-webkit-slider-thumb { 
+                                background-color: ${previewColor} !important; 
+                                border: none !important; 
+                                box-shadow: none !important;
+                            }
+                            .custom-slider::-moz-range-thumb { 
+                                background-color: ${previewColor} !important; 
+                                border: none !important;
+                                box-shadow: none !important;
+                            }
+                        `}</style>
+
                         {/* Hue */}
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] text-white uppercase tracking-widest font-bold">Hue</span>
+                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hue</span>
                             </div>
                             <input
                                 type="range"
                                 min="0" max="360"
                                 value={hue}
-                                onChange={(e) => setHue(parseInt(e.target.value))}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-red-900/30 ${sliderThumbStyle}`}
+                                onChange={(e) => { hasUserInteracted.current = true; setHue(parseInt(e.target.value)); }}
+                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
                             />
                         </div>
 
                         {/* Saturation */}
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] text-white uppercase tracking-widest font-bold">Saturation</span>
+                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Saturation</span>
                             </div>
                             <input
                                 type="range"
                                 min="0" max="100"
                                 value={saturation}
-                                onChange={(e) => setSaturation(parseInt(e.target.value))}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-red-900/30 ${sliderThumbStyle}`}
+                                onChange={(e) => { hasUserInteracted.current = true; setSaturation(parseInt(e.target.value)); }}
+                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
                             />
                         </div>
 
                         {/* Lightness */}
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[9px] text-white uppercase tracking-widest font-bold">Lightness</span>
+                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Lightness</span>
                             </div>
                             <input
                                 type="range"
                                 min="0" max="90"
                                 value={lightness}
-                                onChange={(e) => setLightness(parseInt(e.target.value))}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-red-900/30 ${sliderThumbStyle}`}
+                                onChange={(e) => { hasUserInteracted.current = true; setLightness(parseInt(e.target.value)); }}
+                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
                             />
                         </div>
                     </div>
@@ -436,19 +507,6 @@ export default function PaintShop({
 
                 {/* Footer - Compact & Inline */}
                 <div className="pt-2 space-y-3">
-                    {/* Apply Globally Toggle */}
-                    <button
-                        onClick={() => setApplyGlobally(!applyGlobally)}
-                        className={`w-full py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${applyGlobally
-                            ? 'bg-white/10 border-white text-white'
-                            : 'bg-transparent border-white/10 text-gray-500 hover:text-white'
-                            }`}
-                        style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
-                        <Globe size={12} />
-                        {applyGlobally ? 'Apply Globally: ON' : 'Apply Globally: OFF'}
-                    </button>
-
                     <button
                         onClick={handleApplyPaint}
                         disabled={!hasPendingChanges}
@@ -488,6 +546,6 @@ export default function PaintShop({
                 )}
             </AnimatePresence>
 
-        </motion.div>
+        </motion.div >
     );
 }

@@ -153,30 +153,29 @@ const ProductDetails = ({ data, rawItem, addToInventory, onClose }) => {
             exit="exit"
             className="flex flex-col items-center text-center md:items-start md:text-left w-full"
         >
-            {/* Category + ID */}
+            {/* Category */}
             <motion.div variants={ANIMATIONS.item} className="flex items-center gap-3 mb-4">
-                <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white rounded-full ${data.colors.bg} bg-opacity-80`}>
+                <span className={`px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-white rounded-lg border border-white/20 shadow-md ${data.colors.bg} bg-opacity-80`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
                     {data.category}
                 </span>
-                <span className="text-[10px] font-mono text-gray-500">ID: {data.id.toUpperCase()}</span>
             </motion.div>
 
-            <motion.h1 variants={ANIMATIONS.item} className="text-4xl md:text-5xl font-black italic tracking-wide mb-4 text-white uppercase" style={{ fontFamily: 'Exo 2, sans-serif' }}>
+            <motion.h1 variants={ANIMATIONS.item} className="text-4xl md:text-5xl font-bold italic tracking-wide mb-4 text-white uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {data.title}
             </motion.h1>
 
-            <motion.p variants={ANIMATIONS.item} className="text-gray-400 leading-relaxed mb-8 font-light text-lg">
+            <motion.p variants={ANIMATIONS.item} className="text-gray-400 leading-relaxed mb-8 text-sm tracking-wide" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {data.description}
             </motion.p>
 
             {/* Feature Grid */}
-            <motion.div variants={ANIMATIONS.item} className="w-full grid grid-cols-2 gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-sm mb-8">
+            <motion.div variants={ANIMATIONS.item} className="w-full grid grid-cols-2 gap-4 bg-zinc-900/40 p-6 rounded-2xl border border-white/5 backdrop-blur-sm mb-8" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 {data.features.map((feature) => (
                     <div key={feature.label} className="group flex flex-col items-center md:items-start p-3 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
                         <div className="flex items-center gap-2 text-zinc-500 mb-1 text-xs uppercase tracking-wider">
                             <feature.icon size={14} /> <span>{feature.label}</span>
                         </div>
-                        <div className="text-xl font-bold text-white font-mono">
+                        <div className="text-xl font-bold text-white">
                             {feature.value}
                         </div>
                     </div>
@@ -184,21 +183,15 @@ const ProductDetails = ({ data, rawItem, addToInventory, onClose }) => {
             </motion.div>
 
             {/* Price + Action */}
-            <motion.div variants={ANIMATIONS.item} className="w-full border-t border-white/10 pt-8 flex justify-between items-end">
-                <div>
-                    <span className="block text-xs text-gray-500 uppercase tracking-widest mb-1">Current Price</span>
-                    <span className="text-4xl font-bold text-white" style={{ fontFamily: 'Rajdhani, sans-serif' }}>
-                        {data.price}
-                    </span>
-                </div>
+            <motion.div variants={ANIMATIONS.item} className="w-full border-t border-white/10 pt-8 flex justify-end items-center">
                 <button
                     onClick={handlePurchase}
                     disabled={isConfirmed}
-                    className={`px-12 py-4 font-black uppercase tracking-[0.2em] rounded-xl transition-all shadow-lg text-sm ${isConfirmed
+                    className={`px-12 py-4 font-bold uppercase tracking-[0.2em] rounded-lg transition-all shadow-lg text-sm ${isConfirmed
                         ? 'bg-green-500 text-white scale-110 animate-pulse cursor-not-allowed border-none'
-                        : `${data.colors.bg} text-white hover:brightness-125 active:scale-95 border-b-4 border-black/30 ${data.colors?.isSpecial ? 'rainbow-button' : ''}`
+                        : 'bg-red-600 hover:bg-red-500 text-white hover:scale-105 active:scale-95'
                         }`}
-                    style={{ transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
+                    style={{ fontFamily: 'Orbitron, sans-serif' }}
                 >
                     {isConfirmed ? '✓ CONFIRMED' : 'Buy Now'}
                 </button>

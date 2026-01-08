@@ -27,6 +27,21 @@
     ::-webkit-scrollbar-thumb {
         @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
     }
+
+    /* Marketplace Scrollbar with offsets */
+    .marketplace-scrollbar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .marketplace-scrollbar::-webkit-scrollbar-track {
+        @apply bg-black/20;
+        margin-block: 40px 140px;
+        /* Aligned with item tops and dock top per image */
+    }
+
+    .marketplace-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors;
+    }
 }
 
 /* Animations that were likely missing */
