@@ -32,6 +32,7 @@ useGLTF.preload('/1992_volkswagen_golf_gti_mk2.glb');
 useGLTF.preload('/1984_audi_sport_quattro.glb');
 useGLTF.preload('/1989_mazda_mx-5.glb');
 useGLTF.preload('/1987_ferrari_f40.glb');
+useGLTF.preload('/2015_lamborghini_huracan_lpi-610-4.glb');
 
 
 function IntroCamera() {
@@ -135,7 +136,7 @@ function PendulumControls({ activePage }) {
       maxAzimuthAngle={Math.PI / 2}
       minPolarAngle={Math.PI / 3}
       maxPolarAngle={Math.PI / 2.2}
-      minDistance={5.2}
+      minDistance={8}
       maxDistance={15}
       enablePan={false}
     />
@@ -207,6 +208,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
   const transitionScale = useRef(1);
   const activeEffectRef = useRef(null); // Track active effect for cleanup
+  const [carScale, setCarScale] = useState(1); // Store the car's normalization scale for callouts
 
   // Robust Bounding Box Normalization - Scale matches models to TARGET_LENGTH
   const TARGET_LENGTH = 10.5;
@@ -217,7 +219,16 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
     // Reset to identity for a clean measurement
     scene.scale.setScalar(1);
     scene.position.set(0, 0, 0);
-    scene.updateMatrixWorld();
+
+    // CRITICAL: Reset transformGroupRef scale BEFORE measuring to prevent feedback loop
+    // Otherwise box.expandByObject uses world matrix which includes previous scale
+    if (transformGroupRef.current) {
+      transformGroupRef.current.scale.setScalar(1);
+      transformGroupRef.current.position.set(0, 0, 0);
+      transformGroupRef.current.updateMatrixWorld(true);
+    }
+
+    scene.updateMatrixWorld(true);
 
     // 1. Calculate bounding box of Meshes only (ignore lights/cameras)
     const box = new THREE.Box3();
@@ -258,6 +269,9 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
         // Align Y so the bottom of the bounding box (tires) sits on the floor (y=-1)
         const GROUND_Y = -1;
         transformGroupRef.current.position.y = (-box.min.y * scale) + GROUND_Y;
+
+        // Store scale for callouts to use (inverse scaling)
+        setCarScale(scale);
       }
 
       // Reset scene transforms to identity so wrapper has full control
@@ -604,7 +618,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
         <primitive object={scene} />
         {/* Part Callouts - Now relative to car dimensions */}
         {activePage === 'Garage' && (
-          <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} carModelId={carModelId} />
+          <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} carModelId={carModelId} carScale={carScale} />
         )}
       </group>
     </group>
@@ -784,6 +798,20 @@ function App() {
     };
     checkProfile();
   }, [authenticated, user?.wallet?.address]);
+
+  // Global Sync for Rainbow Animations
+  useEffect(() => {
+    let frameId;
+    const animate = () => {
+      // Speed factor: 50 degrees per second (~7.2s per cycle)
+      const time = Date.now() / 1000;
+      const hue = (time * 50) % 360;
+      document.documentElement.style.setProperty('--rainbow-hue', hue);
+      frameId = requestAnimationFrame(animate);
+    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
 
 
   // Auto-bypass gate if wallet is connected
@@ -981,6 +1009,18 @@ function App() {
   // Total Earned (Referral Earnings)
   const [referralEarnings, setReferralEarnings] = useState(0);
 
+  // Helper to determine storage key for items
+  // Splits 'Special' category into sub-slots (Brakes, Seat, Nitro) to allow simultaneous equipping
+  const getEquipKey = (item) => {
+    if (item.category === 'Special') {
+      const title = item.title?.toLowerCase() || '';
+      if (title.includes('brake') || title.includes('break')) return 'Special_Brakes';
+      if (title.includes('seat')) return 'Special_Seat';
+      if (title.includes('nitro')) return 'Special_Nitro';
+    }
+    return item.category;
+  };
+
   // Function to equip an item (triggered by drag & drop)
   // Enforces "Unique Item" rule: Item can only be on one car at a time
   const equipItem = (item) => {
@@ -993,46 +1033,56 @@ function App() {
     }
 
     const currentCarId = currentCarModel.id;
+    const equipKey = getEquipKey(item);
+
+    // 1. Check if item is equipped on ANY other car (MANUAL UNEQUIP RULE)
+    let equippedOnOtherCar = null;
+    let otherCarName = null;
+
+    Object.entries(equippedPartsByCar).forEach(([carId, parts]) => {
+      // Check the specific key for this item type
+      let isEquipped = false;
+      if (parts) {
+        if (parts[equipKey]?.id === item.id) isEquipped = true;
+        // Also check legacy if needed, though strictly we care about ID match
+        if (equipKey !== 'Special' && parts['Special']?.id === item.id) isEquipped = true;
+      }
+
+      if (carId !== currentCarId && isEquipped) {
+        equippedOnOtherCar = carId;
+        // Try to get model name from ID
+        const model = CAR_MODELS.find(c => c.id === carId);
+        otherCarName = model ? model.name : carId;
+      }
+    });
+
+    if (equippedOnOtherCar) {
+      alert(`Item is equipped on ${otherCarName}. Unequip it from there first!`);
+      return;
+    }
 
     setEquippedPartsByCar(prev => {
       const newState = { ...prev };
 
-      // 1. Check if item is equipped on ANY other car and remove it
-      Object.keys(newState).forEach(carId => {
-        const carParts = { ...newState[carId] };
-        let changed = false;
-
-        if (carParts[item.category]?.id === item.id) {
-          // If this exact item is equipped elsewhere (or here), remove/replace it
-          // Actually, if it's already here, we are just re-equipping (fine)
-          // If it's elsewhere, we remove it from there (move to current)
-          if (carId !== currentCarId) {
-            carParts[item.category] = null;
-            changed = true;
-          }
-        }
-
-        if (changed) newState[carId] = carParts;
-      });
+      // Removed auto-unequip logic as per new rule
 
       // 2. Equip on current car
-      newState[currentCarId] = {
-        ...(newState[currentCarId] || {}),
-        [item.category]: item
-      };
+      const newCarParts = { ...(newState[currentCarId] || {}) };
 
+      // Assign to new key
+      newCarParts[equipKey] = item;
+
+      // CLEANUP: If we are equipping a Special item to a sub-slot, ensure it's not also in 'Special'
+      if (equipKey !== 'Special' && newCarParts['Special']?.id === item.id) {
+        delete newCarParts['Special']; // Remove from legacy slot
+      }
+
+      newState[currentCarId] = newCarParts;
       return newState;
     });
 
     // Trigger flash effect by incrementing counter
     setFlashTrigger(prev => prev + 1);
-    // Placeholder Items for Admin Panel Prop (This assumes MARKETPLACE_ITEMS is not exported, 
-    // so we might need to export it from Marketplace.jsx or define it centrally. 
-    // For now, I will assume Marketplace.jsx has the items. logic. 
-    // Actually, MARKETPLACE_ITEMS are defined inside Marketplace component which is not ideal.
-    // I will need to refactor or pass empty array first, then fix Marketplace.)
-    // TEMPORARY FIX: Define items here or move them to a constant file.
-    // BETTER APPROACH: Let's create a shared data/items.js file.
 
     // Play category-specific equip sound
     playEquip(item.category);
@@ -1042,16 +1092,33 @@ function App() {
   const unequipItem = (item) => {
     if (!item || !item.category) return;
     const currentCarId = currentCarModel.id;
+    const equipKey = getEquipKey(item);
 
     setEquippedPartsByCar(prev => {
       const newState = { ...prev };
-      const carParts = { ...(newState[currentCarId] || {}) };
 
-      // Only unequip if it holds this specific item (or just clear the category)
-      if (carParts[item.category]?.id === item.id) {
-        carParts[item.category] = null;
-        newState[currentCarId] = carParts;
-      }
+      // Iterate ALL cars to find and remove this item
+      Object.keys(newState).forEach(carId => {
+        const carParts = { ...(newState[carId] || {}) };
+        let modified = false;
+
+        // Check target key
+        if (carParts[equipKey]?.id === item.id) {
+          carParts[equipKey] = null;
+          modified = true;
+        }
+
+        // FAILSAFE: Also check 'Special' legacy key if relevant
+        if (item.category === 'Special' && carParts['Special']?.id === item.id) {
+          carParts['Special'] = null;
+          modified = true;
+        }
+
+        if (modified) {
+          newState[carId] = carParts;
+        }
+      });
+
       return newState;
     });
   };
@@ -1252,6 +1319,16 @@ function App() {
                     const tokens = await response.json();
                     console.log('[WalletSync] Found', tokens.length, 'SPL tokens in wallet');
 
+                    // [CRITICAL FIX] Clean up stale on-chain items before re-syncing
+                    // Identify items that are tracked as on-chain (via idToCa)
+                    // and REMOVE them from the current mergedInventory.
+                    // We will re-add them ONLY if they exist in the fresh 'tokens' list.
+                    const trackedItemIds = new Set(Object.keys(idToCa));
+
+                    // Filter out stale on-chain items from the base inventory
+                    mergedInventory = mergedInventory.filter(item => !trackedItemIds.has(item.id || item.item_id));
+                    console.log('[WalletSync] Cleared potential stale on-chain items. Re-syncing...');
+
                     // Build token balances map for all tokens (for unlock button)
                     const balancesMap = {};
                     for (const token of tokens) {
@@ -1384,10 +1461,11 @@ function App() {
         inventory,
         equipped_parts: equippedPartsByCar,
         cash: earnings,
-        netWorth: currentNetWorth
+        netWorth: currentNetWorth,
+        ownedCars // Add owned cars to DB
       });
     }
-  }, [carColor, themeColor, inventory, equippedPartsByCar, earnings, authenticated, user?.wallet?.address, demoMode, isDataLoaded]);
+  }, [carColor, themeColor, inventory, equippedPartsByCar, earnings, ownedCars, authenticated, user?.wallet?.address, demoMode, isDataLoaded]);
 
 
   const handleConnectWallet = () => {
@@ -1549,6 +1627,7 @@ function App() {
             setActivePage={setActivePage}
             inventory={inventory}
             equippedParts={equippedPartsByCar[currentCarModel.id] || { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }}
+            allEquippedParts={equippedPartsByCar}
             equipItem={equipItem}
             unequipItem={unequipItem}
             setDraggedItem={setDraggedItem}

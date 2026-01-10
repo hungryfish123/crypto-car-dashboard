@@ -121,7 +121,7 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                         setInputCode(e.target.value);
                                         if (error) setError(false);
                                     }}
-                                    className="w-full bg-transparent px-6 py-4 text-white placeholder-gray-500 outline-none text-center text-lg tracking-[0.2em] font-['Rajdhani'] uppercase"
+                                    className="w-full bg-transparent px-6 py-4 text-white placeholder-gray-500 outline-none text-center text-lg tracking-[0.2em] font-['Orbitron'] uppercase"
                                     placeholder="ENTER ACCESS CODE"
                                     autoFocus
                                     spellCheck="false"

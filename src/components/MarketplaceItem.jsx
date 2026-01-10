@@ -25,8 +25,8 @@ const MarketplaceItem = ({
             case 3: return { bgColor: 'bg-blue-500', label: 'RARE', isSpecial: false };
             case 4: return { bgColor: 'bg-purple-500', label: 'EPIC', isSpecial: false };
             case 5: return { bgColor: 'bg-yellow-500', label: 'LEGENDARY', isSpecial: false };
-            case 6: return { bgColor: 'rainbow-button', label: 'LEGENDARY', isSpecial: true };
-            case 7: return { bgColor: 'rainbow-button', label: 'GOD TIER', isSpecial: true };
+            case 6: return { bgColor: 'rainbow-bg', label: 'SPECIAL', isSpecial: true };
+            case 7: return { bgColor: 'rainbow-bg', label: 'SPECIAL', isSpecial: true };
             default: return { bgColor: 'bg-gray-500', label: 'COMMON', isSpecial: false };
         }
     };
@@ -41,7 +41,6 @@ const MarketplaceItem = ({
             onMouseEnter={playHover}
             className={`group relative bg-[#0a0a0a]/80 backdrop-blur-md rounded-xl overflow-hidden hover:scale-[1.02] transition-all duration-300 shadow-xl flex flex-col h-[420px] cursor-pointer ${isSpecial ? 'rainbow-border' : 'border border-white/5'}`}
         >
-            {/* Price Badge (Top Right) */}
             {/* Price Badge (Top Right) */}
             <div className="absolute top-4 right-4 z-10 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
                 {price ? (

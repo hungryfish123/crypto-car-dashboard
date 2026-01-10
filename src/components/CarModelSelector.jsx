@@ -74,6 +74,20 @@ export const CAR_MODELS = [
         meshName: 'paint_f40',
         targetNames: [], // User will provide mesh name
         locked: true
+    },
+    {
+        id: 'lamborghini_huracan_2015',
+        name: 'Lamborghini Huracan',
+        year: '2015',
+        description: 'V10 bull. Precision and raw power.',
+        price: '20 Tokens',
+        hp: '610 HP',
+        accel: '3.2s',
+        topSpeed: '325 km/h',
+        model: '/2015_lamborghini_huracan_lpi-610-4.glb',
+        meshName: 'Vehicle_Exterior_mm_ext',
+        targetNames: ['Vehicle_Exterior_mm_ext'],
+        locked: true
     }
 ];
 

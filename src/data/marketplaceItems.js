@@ -411,5 +411,20 @@ export const MARKETPLACE_ITEMS = [
         marketCap: 'N/A',
         cashback: '0%',
         rarityLevel: 5
+    },
+    {
+        id: 'lamborghini_huracan_2015',
+        title: 'Lamborghini Huracan',
+        description: 'V10 bull. Precision and raw power.',
+        price: '20 Tokens',
+        numPrice: 20,
+        image: '/2015_lamborghini_huracan_lpi-610-4.glb',
+        category: 'Cars',
+        rarity: 'bg-orange-500',
+        supply: 'Unlimited',
+        holders: 0,
+        marketCap: 'N/A',
+        cashback: '0%',
+        rarityLevel: 6
     }
 ];

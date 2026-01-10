@@ -134,7 +134,8 @@ export const saveUserData = async (walletAddress, gameState) => {
                 inventory: gameState.inventory,
                 equipped_parts: gameState.equipped_parts,
                 cash: gameState.cash,
-                net_worth: gameState.netWorth
+                net_worth: gameState.netWorth,
+                owned_cars: gameState.ownedCars || ['bmw_m3_e30'] // Ensure at least default car
             })
             .eq('wallet_id', walletAddress);
 

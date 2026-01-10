@@ -31,187 +31,231 @@ const CALLOUT_POSITIONS_BY_MODEL = {
         Breaks: {
             attachPoint: [1.3, -0.5, 3.7],
             calloutPos: [2.0, 0.6, 3.3],
-            itemCategory: 'Special',
-            itemFilter: 'brakes',
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
         },
         Seat: {
             attachPoint: [0.4, 0.1, 1.5],
             calloutPos: [1.2, 1.5, 1],
-            itemCategory: 'Special',
+            itemCategory: 'Special_Seat',
             itemFilter: 'seat',
         },
         Nitro: {
             attachPoint: [0, -0.2, 0],
             calloutPos: [0, 1.5, -0.9],
-            itemCategory: 'Special',
+            itemCategory: 'Special_Nitro',
             itemFilter: 'nitro',
         },
     },
 
     // ========== VW Golf GTI Mk2 1992 ==========
+    // NOTE: All positions use NORMALIZED coordinates (car is scaled to ~10.5 units length)
+    // Adjust X (left/right), Y (up/down), Z (front/back) to position callouts
     vw_golf_gti_mk2: {
         Engine: {
-            attachPoint: [0, 0.2, 3.5],
-            calloutPos: [0, 1.2, 4],
+            attachPoint: [0, 0.0068, 0.015],
+            calloutPos: [0, 0.012, 0.015],
             itemCategory: 'Engines',
         },
         Turbo: {
-            attachPoint: [0.5, 0.3, 3.2],
-            calloutPos: [1, 0.9, 4],
+            attachPoint: [0.003, 0.0068, 0.015],
+            calloutPos: [0.01, 0.012, 0.015],
             itemCategory: 'Turbos',
         },
         Wheels: {
-            attachPoint: [1.2, -0.3, 3.5],
-            calloutPos: [2.0, 0, 3.8],
+            attachPoint: [0.008, 0.002, 0.013],
+            calloutPos: [0.01, 0.008, 0.01],
             itemCategory: 'Wheels',
         },
         Suspension: {
-            attachPoint: [1.0, -0.1, 0],
-            calloutPos: [1.8, 0.5, 0],
+            attachPoint: [0.007, 0.005, -0.011],
+            calloutPos: [0.01, 0.012, -0.012],
             itemCategory: 'Suspensions',
         },
         Breaks: {
-            attachPoint: [1.2, -0.4, 3.3],
-            calloutPos: [2.0, 0.6, 3],
-            itemCategory: 'Special',
-            itemFilter: 'brakes',
+            attachPoint: [0.008, 0.002, -0.012],
+            calloutPos: [0.013, 0.008, -0.013],
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
         },
         Seat: {
-            attachPoint: [0.4, 0.2, 1.2],
-            calloutPos: [1.2, 1.4, 0.8],
-            itemCategory: 'Special',
+            attachPoint: [0.003, 0.005, -0.0001],
+            calloutPos: [0.009, 0.015, -0.0001],
+            itemCategory: 'Special_Seat',
             itemFilter: 'seat',
         },
         Nitro: {
-            attachPoint: [0, -0.1, -0.5],
-            calloutPos: [0, 1.4, -1.2],
-            itemCategory: 'Special',
+            attachPoint: [0, 0.0068, -0.015],
+            calloutPos: [0, 0.012, -0.015],
+            itemCategory: 'Special_Nitro',
             itemFilter: 'nitro',
         },
     },
 
     // ========== Audi Sport Quattro 1984 ==========
-    audi_sport_quattro_1984: {
+    audi_sport_quattro: {
         Engine: {
-            attachPoint: [0, 0.1, 3.6],
-            calloutPos: [0, 1.2, 4.2],
+            attachPoint: [0, 0.0066, 0.015],
+            calloutPos: [0, 0.012, 0.015],
             itemCategory: 'Engines',
         },
         Turbo: {
-            attachPoint: [0.6, 0.25, 3.4],
-            calloutPos: [1.1, 0.9, 4.2],
+            attachPoint: [0.003, 0.0066, 0.015],
+            calloutPos: [0.006, 0.010, 0.015],
             itemCategory: 'Turbos',
         },
         Wheels: {
-            attachPoint: [1.3, -0.35, 3.7],
-            calloutPos: [2.0, 0, 4],
+            attachPoint: [0.0082, 0.002, 0.013],
+            calloutPos: [0.01, 0.01, 0.013],
             itemCategory: 'Wheels',
         },
         Suspension: {
-            attachPoint: [1.1, -0.15, 0],
-            calloutPos: [2, 0.5, 0],
+            attachPoint: [0.007, 0.005, -0.008],
+            calloutPos: [0.01, 0.012, -0.01],
             itemCategory: 'Suspensions',
         },
         Breaks: {
-            attachPoint: [1.3, -0.45, 3.5],
-            calloutPos: [2.0, 0.6, 3.2],
-            itemCategory: 'Special',
-            itemFilter: 'brakes',
+            attachPoint: [0.008, 0.002, -0.01],
+            calloutPos: [0.013, 0.008, -0.01],
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
         },
         Seat: {
-            attachPoint: [0.45, 0.15, 1.4],
-            calloutPos: [1.2, 1.5, 1],
-            itemCategory: 'Special',
+            attachPoint: [0.003, 0.005, -0.0001],
+            calloutPos: [0.009, 0.015, -0.0001],
+            itemCategory: 'Special_Seat',
             itemFilter: 'seat',
         },
         Nitro: {
-            attachPoint: [0, -0.15, -0.3],
-            calloutPos: [0, 1.5, -1],
-            itemCategory: 'Special',
+            attachPoint: [0, 0.0066, -0.013],
+            calloutPos: [0, 0.015, -0.015],
+            itemCategory: 'Special_Nitro',
             itemFilter: 'nitro',
         },
     },
 
     // ========== Mazda MX-5 1989 ==========
-    mazda_mx5_1989: {
+    mazda_mx5_na: {
         Engine: {
-            attachPoint: [0, 0, 3.2],
-            calloutPos: [0, 1.1, 3.8],
+            attachPoint: [0, 0.7, 1.2],
+            calloutPos: [0, 1.1, 1.5],
             itemCategory: 'Engines',
         },
         Turbo: {
-            attachPoint: [0.5, 0.2, 3],
-            calloutPos: [1, 0.8, 3.8],
+            attachPoint: [0.4, 0.7, 1.2],
+            calloutPos: [0.5, 1.1, 1.5],
             itemCategory: 'Turbos',
         },
         Wheels: {
-            attachPoint: [1.1, -0.4, 3.3],
-            calloutPos: [1.8, 0, 3.5],
+            attachPoint: [0.8, 0.3, 1.15],
+            calloutPos: [1.1, 0.8, 1],
             itemCategory: 'Wheels',
         },
         Suspension: {
-            attachPoint: [1.0, -0.2, 0],
-            calloutPos: [1.8, 0.5, 0],
+            attachPoint: [0.6, 0.5, -1.1],
+            calloutPos: [1, 1.1, -1],
             itemCategory: 'Suspensions',
         },
         Breaks: {
-            attachPoint: [1.1, -0.5, 3.1],
-            calloutPos: [1.8, 0.6, 2.8],
-            itemCategory: 'Special',
-            itemFilter: 'brakes',
+            attachPoint: [0.75, 0.3, -1.1],
+            calloutPos: [1.1, 0.8, -0.8],
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
         },
         Seat: {
-            attachPoint: [0.35, 0.05, 1.2],
-            calloutPos: [1.1, 1.4, 0.8],
-            itemCategory: 'Special',
+            attachPoint: [0.4, 0.5, -0.2],
+            calloutPos: [0.7, 1.4, -0.2],
+            itemCategory: 'Special_Seat',
             itemFilter: 'seat',
         },
         Nitro: {
-            attachPoint: [0, -0.2, -0.5],
+            attachPoint: [0, 0.5, -1.1],
             calloutPos: [0, 1.4, -1.1],
-            itemCategory: 'Special',
+            itemCategory: 'Special_Nitro',
             itemFilter: 'nitro',
         },
     },
 
     // ========== Ferrari F40 1987 ==========
-    ferrari_f40_1987: {
+    ferrari_f40: {
         Engine: {
-            attachPoint: [0, 0.1, -2],
-            calloutPos: [0, 1.2, -2.5],
+            attachPoint: [0, 0.3, -1.1],
+            calloutPos: [0, 1.4, -1.5],
             itemCategory: 'Engines',
         },
         Turbo: {
-            attachPoint: [0.6, 0.2, -1.8],
-            calloutPos: [1.1, 0.9, -2.2],
+            attachPoint: [0.5, 0.3, -1.1],
+            calloutPos: [0.5, 1.1, -1.2],
             itemCategory: 'Turbos',
         },
         Wheels: {
-            attachPoint: [1.4, -0.4, 3.5],
-            calloutPos: [2.2, 0, 3.8],
+            attachPoint: [0.9, 0.33, -1.23],
+            calloutPos: [1, 0.8, -1],
             itemCategory: 'Wheels',
         },
         Suspension: {
-            attachPoint: [1.2, -0.2, 0],
-            calloutPos: [2.2, 0.5, 0],
+            attachPoint: [0.7, 0.5, 1.2],
+            calloutPos: [0.8, 1, 1.3],
             itemCategory: 'Suspensions',
         },
         Breaks: {
-            attachPoint: [1.4, -0.5, 3.3],
-            calloutPos: [2.2, 0.6, 3],
-            itemCategory: 'Special',
-            itemFilter: 'brakes',
+            attachPoint: [0.85, 0.3, 1.1],
+            calloutPos: [1.1, 0.6, 1],
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
         },
         Seat: {
-            attachPoint: [0.4, 0.1, 1],
-            calloutPos: [1.2, 1.5, 0.5],
-            itemCategory: 'Special',
+            attachPoint: [0.3, 0.4, 0.1],
+            calloutPos: [0.5, 1.5, 0.2],
+            itemCategory: 'Special_Seat',
             itemFilter: 'seat',
         },
         Nitro: {
-            attachPoint: [0, -0.2, -2.5],
-            calloutPos: [0, 1.5, -3],
-            itemCategory: 'Special',
+            attachPoint: [0, 0, 1.8],
+            calloutPos: [0, 1.1, 1.2],
+            itemCategory: 'Special_Nitro',
+            itemFilter: 'nitro',
+        },
+    },
+
+    // ========== Lamborghini Huracan 2015 ==========
+    lamborghini_huracan_2015: {
+        Engine: {
+            attachPoint: [0, 0.3, -1.1],
+            calloutPos: [0, 1.4, -1.5],
+            itemCategory: 'Engines',
+        },
+        Turbo: {
+            attachPoint: [0.5, 0.3, -1.1],
+            calloutPos: [0.5, 1.1, -1.2],
+            itemCategory: 'Turbos',
+        },
+        Wheels: {
+            attachPoint: [0.9, 0.33, -1.23],
+            calloutPos: [1, 0.8, -1],
+            itemCategory: 'Wheels',
+        },
+        Suspension: {
+            attachPoint: [0.7, 0.5, 1.2],
+            calloutPos: [0.8, 1, 1.3],
+            itemCategory: 'Suspensions',
+        },
+        Breaks: {
+            attachPoint: [0.85, 0.3, 1.1],
+            calloutPos: [1.1, 0.6, 1],
+            itemCategory: 'Special_Brakes',
+            itemFilter: 'brake',
+        },
+        Seat: {
+            attachPoint: [0.3, 0.4, 0.1],
+            calloutPos: [0.5, 1.5, 0.2],
+            itemCategory: 'Special_Seat',
+            itemFilter: 'seat',
+        },
+        Nitro: {
+            attachPoint: [0, 0, 1.8],
+            calloutPos: [0, 1.1, 1.2],
+            itemCategory: 'Special_Nitro',
             itemFilter: 'nitro',
         },
     },
@@ -251,7 +295,7 @@ const getRarityGlow = (rarityLevel) => {
 };
 
 // Single Callout Component - only renders when item is equipped
-const Callout = ({ category, item, attachPoint, calloutPos }) => {
+const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1 }) => {
     const hasItem = item !== null && item !== undefined;
 
     // Only show callout if item is equipped
@@ -276,9 +320,9 @@ const Callout = ({ category, item, attachPoint, calloutPos }) => {
                 transparent={true}
             />
 
-            {/* Small dot at attachment point - white, full opacity */}
-            <mesh position={attachPoint}>
-                <sphereGeometry args={[0.03, 16, 16]} />
+            {/* Small dot at attachment point - size adjusted for car scale */}
+            <mesh position={attachPoint} scale={[1 / carScale, 1 / carScale, 1 / carScale]}>
+                <sphereGeometry args={[0.05, 16, 16]} />
                 <meshBasicMaterial color="#ffffff" transparent={false} opacity={1} />
             </mesh>
 
@@ -290,57 +334,48 @@ const Callout = ({ category, item, attachPoint, calloutPos }) => {
                 style={{ pointerEvents: 'none' }}
             >
                 <div
-                    className={isSpecial ? 'rainbow-border' : ''}
+                    className={isSpecial ? 'rainbow-full-glow' : ''}
                     style={{
-                        width: '160px',
-                        height: '160px',
+                        width: '192px',
+                        height: '192px',
                         border: isSpecial ? '3px solid' : `3px solid ${rarityColor}`,
                         borderRadius: '12px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.95)',
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         padding: '8px',
-                        boxShadow: isSpecial ? undefined : `0 0 40px ${rarityGlow}`,
+                        boxShadow: isSpecial
+                            ? undefined
+                            : `0 0 40px ${rarityGlow}, inset 0 0 20px ${rarityGlow}`,
                     }}
                 >
                     <img
                         src={item.image?.startsWith('/') ? item.image : `/${item.image}`}
                         alt={item.title}
                         style={{
-                            width: '80px',
-                            height: '80px',
+                            width: '125px',
+                            height: '125px',
                             objectFit: 'contain',
                             marginBottom: '6px',
                         }}
                         onError={(e) => {
-                            e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><rect fill="%23333" width="80" height="80"/></svg>';
+                            e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="125" height="125" viewBox="0 0 125 125"><rect fill="%23333" width="125" height="125"/></svg>';
                         }}
                     />
                     <span
-                        className={isSpecial ? 'rainbow-text' : ''}
                         style={{
-                            color: isSpecial ? undefined : rarityColor,
+                            color: '#ffffff',
                             fontSize: '16px',
                             fontFamily: 'Orbitron, sans-serif',
                             fontWeight: '800',
                             textTransform: 'uppercase',
                             textAlign: 'center',
                             lineHeight: 1.1,
-                            marginBottom: '4px',
                         }}
                     >
                         {item.title}
-                    </span>
-                    <span style={{
-                        color: '#22C55E',
-                        fontSize: '14px',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '700',
-                        textTransform: 'uppercase',
-                    }}>
-                        YIELD: {item.cashback || '0%'}
                     </span>
                 </div>
             </Html>
@@ -367,22 +402,13 @@ const findMatchingItem = (calloutConfig, equippedParts, inventory) => {
         }
     }
 
-    // For Special items with filters, also check inventory
-    if (itemFilter && inventory) {
-        const inventoryItem = inventory.find(item =>
-            item.category === itemCategory &&
-            item.title?.toLowerCase().includes(itemFilter.toLowerCase())
-        );
-        if (inventoryItem) {
-            return inventoryItem;
-        }
-    }
+
 
     return null;
 };
 
 // Main CarCallouts Component
-const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carModelId = 'bmw_m3_e30' }) => {
+const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carModelId = 'bmw_m3_e30', carScale = 1 }) => {
     if (!visible) return null;
 
     // Get the callout positions for this specific car model
@@ -400,6 +426,7 @@ const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carMo
                         item={matchingItem}
                         attachPoint={config.attachPoint}
                         calloutPos={config.calloutPos}
+                        carScale={carScale}
                     />
                 );
             })}
