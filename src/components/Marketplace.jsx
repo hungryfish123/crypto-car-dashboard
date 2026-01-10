@@ -156,7 +156,7 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
         .filter(item => {
             return (activeCategory === 'All' || item.category === activeCategory) && item.category !== 'Cars';
         })
-        .sort((a, b) => a.numPrice - b.numPrice);
+        .reverse(); // Show newest (bottom of file) first
 
     // Animation Variants
     const containerVariants = {
@@ -194,12 +194,12 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                         className="block relative group cursor-pointer h-6 w-6"
                     >
                         <img
-                            src="/x-logo-white.png"
+                            src="/x-logo-white.webp"
                             alt="Follow us on X"
                             className="h-full w-full object-contain absolute top-0 left-0 transition-opacity duration-200 group-hover:opacity-0"
                         />
                         <img
-                            src="/x-logo-red.png"
+                            src="/x-logo-red.webp"
                             alt="Follow us on X"
                             className="h-full w-full object-contain absolute top-0 left-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                         />

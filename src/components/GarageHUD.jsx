@@ -56,13 +56,13 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                 >
                     {/* White X Logo (default) */}
                     <img
-                        src="/x-logo-white.png"
+                        src="/x-logo-white.webp"
                         alt="Follow us on X"
                         className="h-full w-full object-contain absolute top-0 left-0 transition-opacity duration-200 group-hover:opacity-0"
                     />
                     {/* Red X Logo (hover) */}
                     <img
-                        src="/x-logo-red.png"
+                        src="/x-logo-red.webp"
                         alt="Follow us on X"
                         className="h-full w-full object-contain absolute top-0 left-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
                     />
@@ -198,7 +198,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
 
                                             <div className="absolute bottom-0 left-0 right-0 p-3 pb-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[40%]">
                                                 <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
-                                                {item.cashback && (<div className="text-[10px] text-green-400 font-bold mt-1" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.cashback} Yield</div>)}
+                                                {/* Yield display removed as per user request */}
                                             </div>
                                         </div>
                                     );

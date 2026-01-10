@@ -108,7 +108,16 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
     // Calculate stats
     const totalParts = inventory.length;
-    const equippedCount = Object.values(equippedParts).filter(Boolean).length;
+    // Calculate TOTAL UNIQUE items equipped across ALL cars
+    const uniqueEquippedIds = new Set();
+    Object.values(equippedParts).forEach(carParts => {
+        Object.values(carParts || {}).forEach(part => {
+            if (part && part.id) {
+                uniqueEquippedIds.add(part.id);
+            }
+        });
+    });
+    const equippedCount = uniqueEquippedIds.size;
     const totalValue = inventory.reduce((sum, item) => {
         const price = parseInt(item.price?.replace(/[^0-9]/g, '') || 0);
         return sum + price;
@@ -432,7 +441,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                     <motion.div variants={itemVariants} className={`grid grid-cols-3 gap-6 ${!isAuthenticated ? 'blur-sm opacity-50' : ''}`}>
                         {[
                             { label: 'Total Invites', value: referrals.length, unit: 'Recruits' },
-                            { label: 'Equipped', value: `${equippedCount}/8`, unit: 'slots' },
+                            { label: 'Equipped', value: `${equippedCount}/7`, unit: 'slots' },
                             { label: 'Fee Bonus', value: `${referrals.length * 5}%`, unit: 'Boost' },
                         ].map((stat, idx) => (
                             <div key={idx} className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-2xl p-5 flex flex-col justify-between transition-colors group h-32">
@@ -518,7 +527,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             <div className="flex items-center gap-6">
                                 {/* Image Layer */}
                                 <div className="w-20 h-20 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300">
-                                    <img src="/garage-pass.png" alt="Pass" className="w-full h-full object-cover" />
+                                    <img src="/garage-pass.webp" alt="Pass" className="w-full h-full object-cover" />
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-white group-hover:text-white transition-colors uppercase italic tracking-wider" style={orbitronFont}>

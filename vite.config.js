@@ -34,7 +34,17 @@ export default defineConfig({
     }
   },
   build: {
-    target: 'esnext' // Support top-level await
+    target: 'esnext', // Support top-level await
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'three-vendor': ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing'],
+          'solana-vendor': ['@solana/web3.js', '@solana/spl-token', '@solana/wallet-adapter-react', '@solana/kit'],
+          'ui-vendor': ['framer-motion', 'lucide-react', 'howler'],
+          'auth-vendor': ['@supabase/supabase-js', '@privy-io/react-auth']
+        }
+      }
+    }
   },
   server: {
     proxy: {

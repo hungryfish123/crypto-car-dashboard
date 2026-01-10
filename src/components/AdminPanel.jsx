@@ -56,8 +56,6 @@ const AdminPanel = ({ onClose, items }) => {
             data.forEach(row => {
                 details[row.item_id] = {
                     ca: row.contract_address || '',
-                    yield: row.yield || '',
-                    supply: row.override_supply || '',
                     buyUrl: row.buy_url || ''
                 };
                 hidden[row.item_id] = row.hidden || false;
@@ -82,8 +80,6 @@ const AdminPanel = ({ onClose, items }) => {
                 item_id: itemId,
                 contract_address: details.ca || null,
                 hidden: isHidden,
-                yield: details.yield || null,
-                override_supply: details.supply || null,
                 buy_url: details.buyUrl || null
             }, { onConflict: 'item_id' });
 
@@ -101,7 +97,7 @@ const AdminPanel = ({ onClose, items }) => {
         setItemDetails(prev => ({
             ...prev,
             [itemId]: {
-                ...(prev[itemId] || { ca: '', yield: '', supply: '', buyUrl: '' }),
+                ...(prev[itemId] || { ca: '', buyUrl: '' }),
                 [field]: value
             }
         }));
@@ -120,8 +116,6 @@ const AdminPanel = ({ onClose, items }) => {
                 item_id: itemId,
                 contract_address: details.ca || null,
                 hidden: newHidden,
-                yield: details.yield || null,
-                override_supply: details.supply || null,
                 buy_url: details.buyUrl || null
             }, { onConflict: 'item_id' });
 
@@ -246,14 +240,13 @@ const AdminPanel = ({ onClose, items }) => {
                             <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] items-center uppercase text-gray-500 font-bold tracking-wider">
                                 <div className="col-span-1">Preview</div>
                                 <div className="col-span-2">Item Info</div>
-                                <div className="col-span-3">Contract Address</div>
-                                <div className="col-span-2">Stats (Yield/Supply)</div>
-                                <div className="col-span-3">Buy Link</div>
+                                <div className="col-span-4">Contract Address</div>
+                                <div className="col-span-4">Buy Link</div>
                                 <div className="col-span-1 text-right">Actions</div>
                             </div>
 
                             {items.map(item => {
-                                const details = itemDetails[item.id] || { ca: '', yield: '', supply: '', buyUrl: '' };
+                                const details = itemDetails[item.id] || { ca: '', buyUrl: '' };
                                 const isHidden = hiddenItems[item.id];
 
                                 return (
@@ -274,7 +267,7 @@ const AdminPanel = ({ onClose, items }) => {
                                         </div>
 
                                         {/* 3. CA */}
-                                        <div className="col-span-3">
+                                        <div className="col-span-4">
                                             <div className="relative">
                                                 <Database size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600" />
                                                 <input
@@ -287,26 +280,8 @@ const AdminPanel = ({ onClose, items }) => {
                                             </div>
                                         </div>
 
-                                        {/* 4. Stats */}
-                                        <div className="col-span-2 space-y-1">
-                                            <input
-                                                type="text"
-                                                placeholder="Yield"
-                                                className="w-full bg-black/40 border border-white/5 rounded py-1 px-2 text-[10px] font-mono text-yellow-500 placeholder-gray-700 focus:outline-none focus:border-yellow-500/50"
-                                                value={details.yield}
-                                                onChange={(e) => updateField(item.id, 'yield', e.target.value)}
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Supply"
-                                                className="w-full bg-black/40 border border-white/5 rounded py-1 px-2 text-[10px] font-mono text-blue-400 placeholder-gray-700 focus:outline-none focus:border-blue-500/50"
-                                                value={details.supply}
-                                                onChange={(e) => updateField(item.id, 'supply', e.target.value)}
-                                            />
-                                        </div>
-
-                                        {/* 5. Link */}
-                                        <div className="col-span-3">
+                                        {/* 4. Buy Link */}
+                                        <div className="col-span-4">
                                             <div className="relative">
                                                 <Link size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600" />
                                                 <input

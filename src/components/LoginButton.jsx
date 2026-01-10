@@ -35,7 +35,7 @@ export default function LoginButton({ onProfileClick }) {
                                 className="px-4 py-3 text-left text-white/80 hover:text-white hover:bg-white/10 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
                                 style={{ fontFamily: 'Orbitron, sans-serif' }}
                             >
-                                <img src="/user-icon.png" className="w-4 h-4 opacity-50" onError={(e) => e.target.style.display = 'none'} />
+                                <img src="/user-icon.webp" className="w-4 h-4 opacity-50" onError={(e) => e.target.style.display = 'none'} />
                                 Profile
                             </button>
                             <div className="h-px bg-white/10 my-1 mx-2"></div>
@@ -64,7 +64,7 @@ export default function LoginButton({ onProfileClick }) {
         >
             <div className="flex items-center gap-3 h-4">
                 <img
-                    src="/privy-logo.png"
+                    src="/privy-logo.webp"
                     alt="Privy"
                     className="h-full w-auto object-contain brightness-0 invert opacity-80 group-hover:opacity-100 transition-opacity"
                 />

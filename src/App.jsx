@@ -6,33 +6,38 @@ import { Lock, Bell } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
 import { AppleStyleDock } from './components/AppleStyleDock';
-import Marketplace from './components/Marketplace';
 import GarageHUD from './components/GarageHUD';
-import PaintShop from './components/PaintShop';
 import LoginButton from './components/LoginButton';
 import { usePrivy } from '@privy-io/react-auth';
 import { fetchUserData, saveUserData } from './dbServices';
 import { useAudio } from './hooks/useAudio';
 import AudioControls from './components/AudioControls';
-import ProfilePage from './components/ProfilePage';
 import CarCallouts from './components/CarCallouts';
 import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
 import AccessGate from './components/AccessGate';
-import AdminPanel from './components/AdminPanel'; // Admin Panel Import
-import Leaderboard from './components/Leaderboard';
 import UsernameModal from './components/UsernameModal';
+import { Loader2 } from 'lucide-react'; // Import Loader icon
+
+// Lazy Load Heavy Components
+const Marketplace = React.lazy(() => import('./components/Marketplace'));
+const PaintShop = React.lazy(() => import('./components/PaintShop'));
+const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
+const Leaderboard = React.lazy(() => import('./components/Leaderboard'));
+const ProfilePage = React.lazy(() => import('./components/ProfilePage'));
+
+// Loading Fallback Component
+const PageLoader = () => (
+  <div className="flex items-center justify-center w-full h-full text-red-500">
+    <Loader2 size={48} className="animate-spin" />
+  </div>
+);
 import { getProfile } from './dbServices';
 import { supabase } from './supabaseClient';
 import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
 
 
 // Preload the models
-useGLTF.preload('/bmw_m3_coupe_e30_1986.glb');
-useGLTF.preload('/1992_volkswagen_golf_gti_mk2.glb');
-useGLTF.preload('/1984_audi_sport_quattro.glb');
-useGLTF.preload('/1989_mazda_mx-5.glb');
-useGLTF.preload('/1987_ferrari_f40.glb');
-useGLTF.preload('/2015_lamborghini_huracan_lpi-610-4.glb');
+// Preloading removed for performance. Models load on demand.
 
 
 function IntroCamera() {
@@ -1182,13 +1187,13 @@ function App() {
 
   // Demo mode test data
   const DEMO_INVENTORY = [
-    { id: 'eng_lv3', title: 'V8 Smooth', price: '4,500 CR', numPrice: 4500, image: '/level3.png', category: 'Engines', rarityLevel: 3, cashback: '2.5%' },
-    { id: 'turbo_lv2', title: 'Small Turbo', price: '2,500 CR', numPrice: 2500, image: '/turbo2.png', category: 'Turbos', rarityLevel: 2, cashback: '1.8%' },
-    { id: 'wheel_lv4', title: 'NASCAR Steelie', price: '14,000 CR', numPrice: 14000, image: '/wheel4.png', category: 'Wheels', rarityLevel: 4, cashback: '5.8%' },
-    { id: 'susp_lv3', title: 'Sport Suspension', price: '4,800 CR', numPrice: 4800, image: '/suspension3.png', category: 'Suspensions', rarityLevel: 3, cashback: '3.0%' },
-    { id: 'special_seat', title: 'Sparco Racing Seat', price: '25,000 CR', numPrice: 25000, image: '/sparco seat.png', category: 'Special', rarityLevel: 6, cashback: '8.0%' },
-    { id: 'special_brakes', title: 'Ceramic Brembo Brakes', price: '35,000 CR', numPrice: 35000, image: '/ceramic breaks.png', category: 'Special', rarityLevel: 6, cashback: '10.5%' },
-    { id: 'special_nitro', title: 'Nitro Boost System', price: '100,000 CR', numPrice: 100000, image: '/nitro boost.png', category: 'Special', rarityLevel: 7, cashback: '25.0%' },
+    { id: 'eng_lv3', title: 'V8 Smooth', price: '4,500 CR', numPrice: 4500, image: '/level3.webp', category: 'Engines', rarityLevel: 3, cashback: '2.5%' },
+    { id: 'turbo_lv2', title: 'Small Turbo', price: '2,500 CR', numPrice: 2500, image: '/turbo2.webp', category: 'Turbos', rarityLevel: 2, cashback: '1.8%' },
+    { id: 'wheel_lv4', title: 'NASCAR Steelie', price: '14,000 CR', numPrice: 14000, image: '/wheel4.webp', category: 'Wheels', rarityLevel: 4, cashback: '5.8%' },
+    { id: 'susp_lv3', title: 'Sport Suspension', price: '4,800 CR', numPrice: 4800, image: '/suspension3.webp', category: 'Suspensions', rarityLevel: 3, cashback: '3.0%' },
+    { id: 'special_seat', title: 'Sparco Racing Seat', price: '25,000 CR', numPrice: 25000, image: '/sparco seat.webp', category: 'Special', rarityLevel: 6, cashback: '8.0%' },
+    { id: 'special_brakes', title: 'Ceramic Brembo Brakes', price: '35,000 CR', numPrice: 35000, image: '/ceramic breaks.webp', category: 'Special', rarityLevel: 6, cashback: '10.5%' },
+    { id: 'special_nitro', title: 'Nitro Boost System', price: '100,000 CR', numPrice: 100000, image: '/nitro boost.webp', category: 'Special', rarityLevel: 7, cashback: '25.0%' },
   ];
 
   // 1. Load Data on Connect (or Demo Mode)
@@ -1235,10 +1240,20 @@ function App() {
           if (data.theme_color) {
             setThemeColor(data.theme_color);
             applyGlobalThemeFromColor(data.theme_color);
-          } else if (data.car_color) {
             // If no theme_color, use car_color as theme
             setThemeColor(data.car_color);
             applyGlobalThemeFromColor(data.car_color);
+          }
+
+          // Hydrate inventory with fresh data from MARKETPLACE_ITEMS (fixes stale image paths)
+          if (data.inventory && Array.isArray(data.inventory)) {
+            data.inventory = data.inventory.map(savedItem => {
+              const freshItem = MARKETPLACE_ITEMS.find(m => m.id === savedItem.id);
+              if (freshItem) {
+                return { ...savedItem, ...freshItem, balance: savedItem.balance }; // Keep saved balance/data but overwrite static info
+              }
+              return savedItem;
+            });
           }
 
           // ==============================================
@@ -1379,7 +1394,7 @@ function App() {
                             category: marketplaceItem?.category || 'Special',
                             balance: balance,
                             contract_address: mint,
-                            image: marketplaceItem?.image || '/level1.png',
+                            image: marketplaceItem?.image || '/level1.webp',
                             price: marketplaceItem?.price || '0 CR',
                             isOnChain: true
                           });
@@ -1573,24 +1588,26 @@ function App() {
             />
 
             {/* Car Model */}
-            <CarModel
-              key={currentCarModel.id}
-              rotationSpeed={rotationSpeed}
-              triggerFlash={flashTrigger}
-              carColor={carColor}
-              carFinish={carFinish}
-              activePage={activePage}
-              isTransitioning={isModelTransitioning}
-              modelPath={currentCarModel.model}
-              isOwned={isCurrentCarOwned}
-              targetNames={currentCarModel.targetNames}
-              autoScale={currentCarModel.autoScale}
-              transitionDirection={transitionDirection}
-              equippedParts={equippedParts}
-              inventory={inventory}
-              carModelId={currentCarModel.id}
-              specialEffect={specialEffect}
-            />
+            <React.Suspense fallback={null}>
+              <CarModel
+                key={currentCarModel.id}
+                rotationSpeed={rotationSpeed}
+                triggerFlash={flashTrigger}
+                carColor={carColor}
+                carFinish={carFinish}
+                activePage={activePage}
+                isTransitioning={isModelTransitioning}
+                modelPath={currentCarModel.model}
+                isOwned={isCurrentCarOwned}
+                targetNames={currentCarModel.targetNames}
+                autoScale={currentCarModel.autoScale}
+                transitionDirection={transitionDirection}
+                equippedParts={equippedParts}
+                inventory={inventory}
+                carModelId={currentCarModel.id}
+                specialEffect={specialEffect}
+              />
+            </React.Suspense>
 
             {/* Floors and Post processing */}
             {sceneBackground === 'grid' && (
@@ -1652,11 +1669,14 @@ function App() {
           />)}
 
         {/* Admin Panel Overlay */}
+        {/* Admin Panel Overlay */}
         {showAdmin && (
-          <AdminPanel
-            onClose={() => setShowAdmin(false)}
-            items={MARKETPLACE_ITEMS} // Pass all items to admin panel
-          />
+          <React.Suspense fallback={<div className="absolute inset-0 bg-black/80 flex items-center justify-center z-50"><Loader2 className="animate-spin text-red-500" size={40} /></div>}>
+            <AdminPanel
+              onClose={() => setShowAdmin(false)}
+              items={MARKETPLACE_ITEMS} // Pass all items to admin panel
+            />
+          </React.Suspense>
         )}
 
         {activePage === 'Marketplace' && (
@@ -1667,13 +1687,15 @@ function App() {
             className="absolute inset-0 z-10 bg-black/80 backdrop-blur-sm"
           >
             <div className="w-full h-full">
-              <Marketplace
-                addToInventory={addToInventory}
-                onProfileClick={() => setActivePage('Profile')}
-                initialSelectedItem={initialSelectedItem}
-                clearInitialItem={() => setInitialSelectedItem(null)}
-                carColor={carColor}
-              />
+              <React.Suspense fallback={<PageLoader />}>
+                <Marketplace
+                  addToInventory={addToInventory}
+                  onProfileClick={() => setActivePage('Profile')}
+                  initialSelectedItem={initialSelectedItem}
+                  clearInitialItem={() => setInitialSelectedItem(null)}
+                  carColor={carColor}
+                />
+              </React.Suspense>
             </div>
           </motion.div>
         )}
@@ -1731,29 +1753,32 @@ function App() {
 
 
       {/* Paint Shop - Only visible in Paint Shop tab */}
+      {/* Paint Shop - Only visible in Paint Shop tab */}
       {activePage === 'Paint Shop' && (
-        <PaintShop
-          carColor={carColor}
-          setCarColor={setCarColor}
-          carFinish={carFinish}
-          setCarFinish={setCarFinish}
-          hue={hue}
-          setHue={setHue}
-          saturation={saturation}
-          setSaturation={setSaturation}
-          lightness={lightness}
-          setLightness={setLightness}
-          environment={environment}
-          setEnvironment={setEnvironment}
-          sceneBackground={sceneBackground}
-          setSceneBackground={setSceneBackground}
-          specialEffect={specialEffect}
-          setSpecialEffect={setSpecialEffect}
-          rainbowUnlocked={rainbowUnlocked}
-          onUnlockRainbow={handleUnlockRainbow}
-          themeColor={themeColor}
-          setThemeColor={setThemeColor}
-        />
+        <React.Suspense fallback={null}>
+          <PaintShop
+            carColor={carColor}
+            setCarColor={setCarColor}
+            carFinish={carFinish}
+            setCarFinish={setCarFinish}
+            hue={hue}
+            setHue={setHue}
+            saturation={saturation}
+            setSaturation={setSaturation}
+            lightness={lightness}
+            setLightness={setLightness}
+            environment={environment}
+            setEnvironment={setEnvironment}
+            sceneBackground={sceneBackground}
+            setSceneBackground={setSceneBackground}
+            specialEffect={specialEffect}
+            setSpecialEffect={setSpecialEffect}
+            rainbowUnlocked={rainbowUnlocked}
+            onUnlockRainbow={handleUnlockRainbow}
+            themeColor={themeColor}
+            setThemeColor={setThemeColor}
+          />
+        </React.Suspense>
       )}
 
       {/* Username Onboarding Modal */}
@@ -1771,38 +1796,43 @@ function App() {
 
       {/* Leaderboard Page */}
       {activePage === 'Leaderboard' && (
-        <Leaderboard
-          onBack={() => setActivePage('Garage')}
-          onProfileClick={() => setActivePage('Profile')}
-          carColor={carColor}
-        />
+        <React.Suspense fallback={<PageLoader />}>
+          <Leaderboard
+            onBack={() => setActivePage('Garage')}
+            onProfileClick={() => setActivePage('Profile')}
+            carColor={carColor}
+          />
+        </React.Suspense>
       )}
 
       {/* Profile Page */}
+      {/* Profile Page */}
       {activePage === 'Profile' && (
-        <ProfilePage
-          inventory={inventory}
-          equippedParts={equippedParts}
-          earnings={earnings}
-          referralCode={referralCode}
-          pendingRewards={pendingRewards}
-          onRewardsClaimed={() => setPendingRewards(0)}
-          username={username}
-          avatarUrl={avatarUrl}
-          onAvatarUpdated={(url) => setAvatarUrl(url)}
-          hourlyEarnings={
-            Object.values(equippedParts || {}).reduce((total, part) => {
-              if (!part) return total;
-              const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
-              return total + yieldVal;
-            }, 0).toFixed(4)
-          }
-          totalEarned={activePage === 'Profile' ? referralEarnings : 0}
-          currentCarModel={currentCarModel}
-          carColor={carColor}
-          carFinish={carFinish}
-          ownedCars={ownedCars}
-        />
+        <React.Suspense fallback={<PageLoader />}>
+          <ProfilePage
+            inventory={inventory}
+            equippedParts={equippedParts}
+            earnings={earnings}
+            referralCode={referralCode}
+            pendingRewards={pendingRewards}
+            onRewardsClaimed={() => setPendingRewards(0)}
+            username={username}
+            avatarUrl={avatarUrl}
+            onAvatarUpdated={(url) => setAvatarUrl(url)}
+            hourlyEarnings={
+              Object.values(equippedParts || {}).reduce((total, part) => {
+                if (!part) return total;
+                const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
+                return total + yieldVal;
+              }, 0).toFixed(4)
+            }
+            totalEarned={activePage === 'Profile' ? referralEarnings : 0}
+            currentCarModel={currentCarModel}
+            carColor={carColor}
+            carFinish={carFinish}
+            ownedCars={ownedCars}
+          />
+        </React.Suspense>
       )}
 
       {/* Apple Dock - Always Last/Top */}
