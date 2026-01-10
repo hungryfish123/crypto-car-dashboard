@@ -74,7 +74,7 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                             className="w-full h-full object-cover"
                         >
                             <source src="/backgrounds/access_bg.webm" type="video/webm" />
-                            <source src="/backgrounds/access_bg.mp4" type="video/mp4" />
+
                         </video>
                     </div>
 
