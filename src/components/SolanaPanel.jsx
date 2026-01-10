@@ -31,7 +31,13 @@ const SimpleLineChart = ({ data, isPositive, color }) => {
     }).join(' ');
 
     // Dynamic color from prop, default to red
-    const strokeColor = color || '#ef4444';
+    let strokeColor = color || '#ef4444';
+
+    // Fix: If car color is black, use gray for the chart so it's visible against the dark background
+    if (strokeColor.toLowerCase() === '#000000' || strokeColor.toLowerCase() === '#000' || strokeColor.toLowerCase() === '#1a1a1a') {
+        strokeColor = '#9ca3af'; // gray-400
+    }
+
     // Use 8-digit hex for glow transparency (approx 60%) or fallback
     const glowColor = strokeColor.startsWith('#') ? `${strokeColor}99` : strokeColor;
 
@@ -229,8 +235,8 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
                             <span className="text-sm font-bold text-gray-400 font-mono">+{hourlyEarnings}</span>
                         </div>
                         <div className="flex justify-between items-end">
-                            <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Total Earned</span>
-                            <span className="text-sm font-bold text-gray-400 font-mono">{earnings.toFixed(3)}</span>
+                            <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL Earned</span>
+                            <span className="text-sm font-bold text-gray-400 font-mono">{earnings.toFixed(3)} SOL</span>
                         </div>
                         {/* Lifetime Earnings from fee distribution */}
                         {lifetimeEarnings > 0 && (

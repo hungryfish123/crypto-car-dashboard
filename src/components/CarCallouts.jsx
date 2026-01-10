@@ -295,8 +295,9 @@ const getRarityGlow = (rarityLevel) => {
 };
 
 // Single Callout Component - only renders when item is equipped
-const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1 }) => {
+const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1, unequipItem }) => {
     const hasItem = item !== null && item !== undefined;
+    const [isHovered, setIsHovered] = React.useState(false);
 
     // Only show callout if item is equipped
     if (!hasItem) return null;
@@ -307,6 +308,13 @@ const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1 }) => {
 
     // Check if item is special (rainbow animated)
     const isSpecial = item.rarityLevel >= 6;
+
+    const handleUnequip = (e) => {
+        e.stopPropagation();
+        if (unequipItem && item) {
+            unequipItem(item);
+        }
+    };
 
     return (
         <group>
@@ -326,16 +334,22 @@ const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1 }) => {
                 <meshBasicMaterial color="#ffffff" transparent={false} opacity={1} />
             </mesh>
 
+            {/* Clickable Area Helper - Invisible mesh to catch clicks better if needed, but Html captures mouse events well */}
+
             {/* Callout Box - rarity colored border (rainbow for special) */}
             <Html
                 position={calloutPos}
                 center
                 distanceFactor={6}
-                style={{ pointerEvents: 'none' }}
+                style={{ cursor: 'pointer' }}
             >
                 <div
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                    onClick={handleUnequip}
                     className={isSpecial ? 'rainbow-full-glow' : ''}
                     style={{
+                        position: 'relative', // For overlay
                         width: '192px',
                         height: '192px',
                         border: isSpecial ? '3px solid' : `3px solid ${rarityColor}`,
@@ -349,34 +363,77 @@ const Callout = ({ category, item, attachPoint, calloutPos, carScale = 1 }) => {
                         boxShadow: isSpecial
                             ? undefined
                             : `0 0 40px ${rarityGlow}, inset 0 0 20px ${rarityGlow}`,
+                        transition: 'all 0.2s ease',
                     }}
                 >
-                    <img
-                        src={item.image?.startsWith('/') ? item.image : `/${item.image}`}
-                        alt={item.title}
-                        style={{
-                            width: '125px',
-                            height: '125px',
-                            objectFit: 'contain',
-                            marginBottom: '6px',
-                        }}
-                        onError={(e) => {
-                            e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="125" height="125" viewBox="0 0 125 125"><rect fill="%23333" width="125" height="125"/></svg>';
-                        }}
-                    />
-                    <span
-                        style={{
-                            color: '#ffffff',
-                            fontSize: '16px',
-                            fontFamily: 'Orbitron, sans-serif',
-                            fontWeight: '800',
-                            textTransform: 'uppercase',
-                            textAlign: 'center',
-                            lineHeight: 1.1,
-                        }}
-                    >
-                        {item.title}
-                    </span>
+                    {/* Content Container - Blurs on hover */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '100%',
+                        height: '100%',
+                        filter: isHovered ? 'blur(4px)' : 'none',
+                        transition: 'filter 0.2s ease',
+                        opacity: isHovered ? 0.4 : 1
+                    }}>
+                        <img
+                            src={item.image?.startsWith('/') ? item.image : `/${item.image}`}
+                            alt={item.title}
+                            style={{
+                                width: '125px',
+                                height: '125px',
+                                objectFit: 'contain',
+                                marginBottom: '6px',
+                            }}
+                            onError={(e) => {
+                                e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="125" height="125" viewBox="0 0 125 125"><rect fill="%23333" width="125" height="125"/></svg>';
+                            }}
+                        />
+                        <span
+                            style={{
+                                color: '#ffffff',
+                                fontSize: '16px',
+                                fontFamily: 'Orbitron, sans-serif',
+                                fontWeight: '800',
+                                textTransform: 'uppercase',
+                                textAlign: 'center',
+                                lineHeight: 1.1,
+                            }}
+                        >
+                            {item.title}
+                        </span>
+                    </div>
+
+                    {/* Remove Overlay - Shows on hover */}
+                    {isHovered && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 10
+                        }}>
+                            <span
+                                style={{
+                                    color: '#EF4444', // Red-500
+                                    fontSize: '18px',
+                                    fontFamily: 'Orbitron, sans-serif',
+                                    fontWeight: '900',
+                                    textTransform: 'uppercase',
+                                    textShadow: '0 2px 4px rgba(0,0,0,0.8)',
+                                    letterSpacing: '0.05em'
+                                }}
+                            >
+                                REMOVE ITEM
+                            </span>
+                        </div>
+                    )}
                 </div>
             </Html>
         </group>
@@ -401,14 +458,11 @@ const findMatchingItem = (calloutConfig, equippedParts, inventory) => {
             return equippedItem;
         }
     }
-
-
-
     return null;
 };
 
 // Main CarCallouts Component
-const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carModelId = 'bmw_m3_e30', carScale = 1 }) => {
+const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carModelId = 'bmw_m3_e30', carScale = 1, unequipItem }) => {
     if (!visible) return null;
 
     // Get the callout positions for this specific car model
@@ -427,6 +481,7 @@ const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carMo
                         attachPoint={config.attachPoint}
                         calloutPos={config.calloutPos}
                         carScale={carScale}
+                        unequipItem={unequipItem}
                     />
                 );
             })}

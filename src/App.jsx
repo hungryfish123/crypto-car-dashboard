@@ -182,7 +182,7 @@ function DynamicGrid({ carColor, specialEffect, ...props }) {
   return <Grid ref={gridRef} cellColor={activeCellColor} sectionColor={specialEffect === 'rainbow' ? '#00ff00' : '#666666'} {...props} />;
 }
 
-function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30', specialEffect = null }) {
+const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30', specialEffect = null, unequipItem }) => {
   const { scene } = useGLTF(modelPath);
   const meshRef = useRef();
   const transformGroupRef = useRef();
@@ -623,7 +623,7 @@ function CarModel({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
         <primitive object={scene} />
         {/* Part Callouts - Now relative to car dimensions */}
         {activePage === 'Garage' && (
-          <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} carModelId={carModelId} carScale={carScale} />
+          <CarCallouts equippedParts={equippedParts} inventory={inventory} visible={true} carModelId={carModelId} carScale={carScale} unequipItem={unequipItem} />
         )}
       </group>
     </group>
@@ -1640,6 +1640,7 @@ function App() {
                 inventory={inventory}
                 carModelId={currentCarModel.id}
                 specialEffect={specialEffect}
+                unequipItem={unequipItem}
               />
             </React.Suspense>
 
@@ -1845,7 +1846,7 @@ function App() {
         <React.Suspense fallback={<PageLoader />}>
           <ProfilePage
             inventory={inventory}
-            equippedParts={equippedParts}
+            equippedParts={equippedPartsByCar}
             earnings={earnings}
             referralCode={referralCode}
             pendingRewards={pendingRewards}

@@ -84,3 +84,9 @@
     border-color: hsl(var(--rainbow-hue), 100%, 50%);
     box-shadow: 0 0 30px hsl(var(--rainbow-hue), 100%, 50%), inset 0 0 20px hsl(var(--rainbow-hue), 100%, 50%);
 }
+
+/* Subtle rainbow border for inventory (almost no glow) */
+.rainbow-border-subtle {
+    border-color: hsl(var(--rainbow-hue), 100%, 50%);
+    box-shadow: 0 0 2px hsl(var(--rainbow-hue), 100%, 50%), inset 0 0 2px hsl(var(--rainbow-hue), 100%, 50%);
+}

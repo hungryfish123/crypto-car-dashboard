@@ -42,6 +42,19 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
         fetchVisibleItems();
     }, []);
 
+    // Shared Rarity Border Logic
+    const getRarityBorder = (level) => {
+        switch (level) {
+            case 1: return 'border-white/20 hover:border-gray-400';
+            case 2: return 'border-green-500/50 hover:border-green-500';
+            case 3: return 'border-blue-500/50 hover:border-blue-500';
+            case 4: return 'border-purple-500/50 hover:border-purple-500';
+            case 5: return 'border-yellow-500/50 hover:border-yellow-500';
+            case 6: case 7: return 'rainbow-border-subtle border-transparent'; // Special
+            default: return 'border-white/20 hover:border-white/50';
+        }
+    };
+
     return (
         <>
             <div className="fixed left-8 top-6 z-40 flex items-center gap-4">
@@ -92,17 +105,6 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                         {modItems.map((item) => {
                             const rarityLabels = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'SPECIAL', 'SPECIAL'];
                             const rarityLabel = rarityLabels[Math.min(item.rarityLevel - 1, 6)] || 'COMMON';
-                            const getRarityBorder = (level) => {
-                                switch (level) {
-                                    case 1: return 'border-white/10 hover:border-gray-400';
-                                    case 2: return 'border-green-500/20 hover:border-green-500';
-                                    case 3: return 'border-blue-500/20 hover:border-blue-500';
-                                    case 4: return 'border-purple-500/20 hover:border-purple-500';
-                                    case 5: return 'border-yellow-500/20 hover:border-yellow-500';
-                                    case 6: case 7: return 'border-red-500/20 hover:border-red-500';
-                                    default: return 'border-white/10 hover:border-white/30';
-                                }
-                            };
 
                             return (
                                 <div key={item.id} onClick={() => onNavigateToItem && onNavigateToItem(item)} onMouseEnter={playHover}
@@ -154,18 +156,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                     const rarityLabels = ['COMMON', 'UNCOMMON', 'RARE', 'EPIC', 'LEGENDARY', 'SPECIAL', 'SPECIAL'];
                                     const rarityLabel = rarityLabels[Math.min(item.rarityLevel - 1, 6)] || 'COMMON';
                                     const isBeingDragged = draggedItem && draggedItem.id === item.id;
-                                    const getRarityBorder = (level) => {
-                                        if (isEquipped) return 'border-red-500/50 hover:border-red-500';
-                                        switch (level) {
-                                            case 1: return 'border-white/10 hover:border-gray-400';
-                                            case 2: return 'border-green-500/20 hover:border-green-500';
-                                            case 3: return 'border-blue-500/20 hover:border-blue-500';
-                                            case 4: return 'border-purple-500/20 hover:border-purple-500';
-                                            case 5: return 'border-yellow-500/20 hover:border-yellow-500';
-                                            case 6: case 7: return 'border-red-500/20 hover:border-red-500';
-                                            default: return 'border-white/10 hover:border-white/30';
-                                        }
-                                    };
+
                                     return (
                                         <div key={item.id} draggable={!isEquipped}
                                             onDragStart={(e) => {
@@ -181,16 +172,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                             {/* Rarity Label (Top Right) */}
                                             <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-white/20 shadow-md ${getRarityStyles(item.rarityLevel)} text-white z-10`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{rarityLabel}</div>
 
-                                            {/* Minimal Remove Icon (Top Left) - Only if equipped */}
-                                            {isEquipped && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); unequipItem(item); }}
-                                                    className="absolute top-2 left-2 z-20 opacity-80 hover:opacity-100 hover:scale-110 transition-all duration-200 bg-black/20 rounded-full p-1 backdrop-blur-sm"
-                                                    title="Unequip"
-                                                >
-                                                    <X size={24} color="white" strokeWidth={3} className="drop-shadow-lg" />
-                                                </button>
-                                            )}
+                                            {/* Minimal Remove Icon (Top Left) - REMOVED */}
 
                                             <div className="absolute inset-0 flex items-center justify-center p-6 pb-12">
                                                 <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className={`w-full h-full object-contain drop-shadow-md transition-transform duration-200 pointer-events-none ${isEquipped ? '' : 'group-hover:scale-110'}`} onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />

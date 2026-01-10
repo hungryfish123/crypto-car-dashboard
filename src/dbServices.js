@@ -21,7 +21,7 @@ const DEFAULT_USER_DATA = {
         Wheels: null,
         Special: null
     },
-    cash: 50000,
+    cash: 0, // No mock data - user starts with 0 SOL
     net_worth: 0,
     referral_code: null,
     referral_earnings: 0,
