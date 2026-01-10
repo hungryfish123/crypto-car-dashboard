@@ -989,6 +989,17 @@ function App() {
     }
   });
 
+  // Hydrate inventory on mount to ensure fresh data (e.g. cashback) from MARKETPLACE_ITEMS
+  useEffect(() => {
+    setInventory(prev => {
+      if (!prev || prev.length === 0) return prev;
+      return prev.map(item => {
+        const fresh = MARKETPLACE_ITEMS.find(m => m.id === item.id);
+        return fresh ? { ...item, ...fresh } : item;
+      });
+    });
+  }, []); // Run once on mount
+
   // Derived state for current car's equipped parts
   const equippedParts = equippedPartsByCar[currentCarModel.id] || {
     Engines: null,
@@ -1417,21 +1428,44 @@ function App() {
           setInventory(mergedInventory);
 
           // Handle migration from old single-car format to new multi-car format
-          const loadedParts = data.equipped_parts || {};
+          let loadedParts = data.equipped_parts || {};
+
+          // HYDRATE EQUIPPED PARTS: Ensure they have fresh data (cashback, images, etc.) from MARKETPLACE_ITEMS
+          const hydrateParts = (partsObj) => {
+            if (!partsObj) return null;
+            const hydrated = { ...partsObj };
+            Object.keys(hydrated).forEach(key => {
+              const part = hydrated[key];
+              if (part) {
+                const fresh = MARKETPLACE_ITEMS.find(m => m.id === part.id);
+                if (fresh) hydrated[key] = { ...part, ...fresh };
+              }
+            });
+            return hydrated;
+          };
+
           if (loadedParts.Engines || loadedParts.Turbos || loadedParts.Wheels) {
             // Legacy format detected
+            loadedParts = hydrateParts(loadedParts);
             setEquippedPartsByCar({
               'bmw_m3_e30': loadedParts,
               'vw_golf_gti_mk2': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }
             });
           } else {
-            // New format or empty
-            setEquippedPartsByCar(loadedParts.bmw_m3_e30 ? loadedParts : {
+            // New format or empty - Hydrate each car's parts
+            const hydratedPartsByCar = {};
+            Object.keys(loadedParts).forEach(carId => {
+              hydratedPartsByCar[carId] = hydrateParts(loadedParts[carId]);
+            });
+
+            // Merge with defaults to ensure all cars exist
+            setEquippedPartsByCar({
               'bmw_m3_e30': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null },
-              'vw_golf_gti_mk2': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }
+              'vw_golf_gti_mk2': { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null },
+              ...hydratedPartsByCar
             });
           }
-          setEarnings(Number(data.cash) || 50000);
+          setEarnings(Number(data.cash) || 0);
           setReferralCode(data.referral_code || '');
           setUsername(data.username || '');
           setAvatarUrl(data.avatar_url || '');
