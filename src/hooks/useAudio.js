@@ -2,8 +2,9 @@ import { Howl, Howler } from 'howler';
 import { useState, useCallback, useEffect, useRef } from 'react';
 
 // Sound configurations
+// Sound configurations
 const SOUNDS_CONFIG = {
-    bgm: { src: ['/sounds/background.mp3'], volume: 0.2, loop: true },
+    // bgm removed as requested
     engine: { src: ['/sounds/carengine.mp3'], volume: 0.8 },
     ratchet: { src: ['/sounds/ratchet.mp3'], volume: 0.7 },
     colorSuccess: { src: ['/sounds/colorchange.mp3'], volume: 0.6 },
@@ -14,8 +15,6 @@ const SOUNDS_CONFIG = {
 
 // TRUE Singleton - only one instance ever created
 let soundsInstance = null;
-let bgmInstance = null;
-let bgmStarted = false;
 let musicMutedGlobal = false;
 let sfxMutedGlobal = false;
 
@@ -40,10 +39,6 @@ const initializeSounds = () => {
                     onloaderror: () => console.warn(`${key}.mp3 not found`)
                 });
                 soundsInstance[key] = sound;
-
-                if (key === 'bgm') {
-                    bgmInstance = sound;
-                }
             } catch (e) {
                 console.warn(`Failed to load ${key}:`, e);
             }
@@ -52,27 +47,8 @@ const initializeSounds = () => {
     return soundsInstance;
 };
 
-const startBGM = () => {
-    if (!bgmStarted && bgmInstance) {
-        bgmInstance.play();
-        bgmStarted = true;
-        console.log('BGM started');
-    }
-};
-
 // Initialize sounds immediately (singleton)
 initializeSounds();
-
-// Start BGM on first user interaction (browser requirement)
-if (typeof document !== 'undefined') {
-    const handleFirstInteraction = () => {
-        startBGM();
-        document.removeEventListener('click', handleFirstInteraction);
-        document.removeEventListener('keydown', handleFirstInteraction);
-    };
-    document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('keydown', handleFirstInteraction);
-}
 
 export const useAudio = () => {
     const [, forceUpdate] = useState(0);
@@ -112,9 +88,7 @@ export const useAudio = () => {
 
     const toggleMusicMute = useCallback(() => {
         musicMutedGlobal = !musicMutedGlobal;
-        if (bgmInstance) {
-            bgmInstance.mute(musicMutedGlobal);
-        }
+        // BGM instance removed, just toggling state for UI compatibility
         notifySubscribers();
     }, []);
 
