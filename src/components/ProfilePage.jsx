@@ -4,6 +4,7 @@ import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check
 import { usePrivy } from '@privy-io/react-auth';
 import { getReferralHistory } from '../dbServices';
 import { useClaimRewards } from '../hooks/useClaimRewards';
+import { useAudio } from '../hooks/useAudio';
 import { supabase } from '../supabaseClient';
 import InteractiveLogo from './InteractiveLogo';
 import GaragePassModal from './GaragePassModal';
@@ -37,6 +38,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
     // Claim Rewards Hook
     const { claimRewards, loading: claimLoading, error: claimError, txSignature } = useClaimRewards();
+    const { playSuccess } = useAudio();
 
     // Authentication check (Privy only)
     const isAuthenticated = authenticated;
@@ -214,6 +216,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
         if (!walletAddress || pendingRewards <= 0 || claimLoading) return;
         const result = await claimRewards(walletAddress);
         if (result.success) {
+            playSuccess();
             setClaimSuccess(true);
             if (onRewardsClaimed) onRewardsClaimed(result.txSignature);
             setTimeout(() => setClaimSuccess(false), 5000);

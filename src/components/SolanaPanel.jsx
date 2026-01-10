@@ -4,6 +4,7 @@ import { TrendingUp, DollarSign, Wallet, Activity, Gauge, Zap, Weight, Award } f
 import { useSolanaToken } from '../hooks/useSolanaToken';
 import { useClaimRewards } from '../hooks/useClaimRewards';
 import { useUserRewards } from '../hooks/useUserRewards';
+import { useAudio } from '../hooks/useAudio';
 import { usePrivy } from '@privy-io/react-auth';
 import confetti from 'canvas-confetti';
 
@@ -126,6 +127,7 @@ const StatBar = ({ label, value, max, inverse = false }) => {
 const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { claimRewards, loading: claiming } = useClaimRewards();
+    const { playSuccess } = useAudio();
     const { user } = usePrivy();
 
     // Fetch user rewards from database (claimable fees + lifetime earnings)
@@ -145,6 +147,7 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
         const result = await claimRewards(user.wallet.address);
 
         if (result.success) {
+            playSuccess(); // Play success sound
             confetti({
                 particleCount: 150,
                 spread: 100,

@@ -9,7 +9,6 @@ const SOUNDS_CONFIG = {
     ratchet: { src: ['/sounds/ratchet.mp3'], volume: 0.7 },
     colorSuccess: { src: ['/sounds/colorchange.mp3'], volume: 0.6 },
     click: { src: ['/sounds/click.mp3'], volume: 0.4 },
-    hover: { src: ['/sounds/hover.mp3'], volume: 0.2 },
     success: { src: ['/sounds/success.mp3'], volume: 0.6 }
 };
 
@@ -72,7 +71,7 @@ export const useAudio = () => {
     }, []);
 
     const playClick = useCallback(() => playSFX('click'), [playSFX]);
-    const playHover = useCallback(() => playSFX('hover'), [playSFX]);
+    const playHover = useCallback(() => { }, []); // Removed as requested
     const playSuccess = useCallback(() => playSFX('success'), [playSFX]);
     const playEngine = useCallback(() => playSFX('engine'), [playSFX]);
     const playRatchet = useCallback(() => playSFX('ratchet'), [playSFX]);
