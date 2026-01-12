@@ -11,7 +11,7 @@ const BMW_MODEL_PATH = '/bmw_m3_coupe_e30_1986.glb';
  * - Spins slowly 360° around itself
  */
 function BMWModel({ color }) {
-    const { scene } = useGLTF(BMW_MODEL_PATH, '/draco-gltf/');
+    const { scene } = useGLTF(BMW_MODEL_PATH);
     const groupRef = useRef();
 
     // Clone scene to avoid side effects
@@ -60,7 +60,7 @@ function BMWModel({ color }) {
 }
 
 // Preload BMW model
-useGLTF.preload(BMW_MODEL_PATH, '/draco-gltf/');
+useGLTF.preload(BMW_MODEL_PATH);
 
 /**
  * ProfileCarViewer Component

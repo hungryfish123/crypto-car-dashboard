@@ -39,7 +39,7 @@ import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
 
 
 // Preload the default car model early for faster LCP
-useGLTF.preload('/bmw_m3_coupe_e30_1986.glb', '/draco-gltf/');
+useGLTF.preload('/bmw_m3_coupe_e30_1986.glb');
 
 
 function IntroCamera() {
@@ -185,7 +185,7 @@ function DynamicGrid({ carColor, specialEffect, ...props }) {
 }
 
 const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30', specialEffect = null, unequipItem }) => {
-  const { scene } = useGLTF(modelPath, '/draco-gltf/');
+  const { scene } = useGLTF(modelPath);
   const meshRef = useRef();
   const transformGroupRef = useRef();
   const prevIsOwned = useRef(isOwned);

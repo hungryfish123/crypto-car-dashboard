@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Package, X } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
@@ -75,12 +75,14 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                         src="/x-logo-white.webp"
                         alt="Follow us on X"
                         className="h-full w-full object-contain absolute top-0 left-0 transition-opacity duration-200 group-hover:opacity-0"
+                        loading="lazy"
                     />
                     {/* Red X Logo (hover) */}
                     <img
                         src="/x-logo-red.webp"
                         alt="Follow us on X"
                         className="h-full w-full object-contain absolute top-0 left-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                        loading="lazy"
                     />
                 </a>
             </div>
@@ -117,7 +119,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
 
                                     {/* Full image - takes entire space */}
                                     <div className="h-full w-full flex items-center justify-center p-3">
-                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-110 pointer-events-none" onError={(e) => e.target.style.display = 'none'} />
+                                        <img src={item.image} alt={item.title} className="w-full h-full object-contain drop-shadow-md transition-transform duration-200 group-hover:scale-110 pointer-events-none" loading="lazy" onError={(e) => e.target.style.display = 'none'} />
                                     </div>
 
                                     {/* Hover Panel - Slides up from bottom */}
@@ -177,7 +179,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                             {/* Minimal Remove Icon (Top Left) - REMOVED */}
 
                                             <div className="absolute inset-0 flex items-center justify-center p-6 pb-12">
-                                                <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className={`w-full h-full object-contain drop-shadow-md transition-transform duration-200 pointer-events-none ${isEquipped ? '' : 'group-hover:scale-110'}`} onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />
+                                                <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className={`w-full h-full object-contain drop-shadow-md transition-transform duration-200 pointer-events-none ${isEquipped ? '' : 'group-hover:scale-110'}`} loading="lazy" onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />
                                             </div>
 
                                             <div className="absolute bottom-0 left-0 right-0 p-3 pb-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[40%]">
@@ -207,4 +209,4 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
     );
 };
 
-export default GarageHUD;
+export default memo(GarageHUD);

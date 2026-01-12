@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Package } from 'lucide-react';
 import MarketplaceItem from './MarketplaceItem';
@@ -200,11 +200,13 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                             src="/x-logo-white.webp"
                             alt="Follow us on X"
                             className="h-full w-full object-contain absolute top-0 left-0 transition-opacity duration-200 group-hover:opacity-0"
+                            loading="lazy"
                         />
                         <img
                             src="/x-logo-red.webp"
                             alt="Follow us on X"
                             className="h-full w-full object-contain absolute top-0 left-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                            loading="lazy"
                         />
                     </a>
                 </div>
@@ -332,4 +334,4 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
     );
 };
 
-export default Marketplace;
+export default memo(Marketplace);
