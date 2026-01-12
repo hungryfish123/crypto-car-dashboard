@@ -5,7 +5,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const CACHE_KEY = 'p_token_metrics'
-const CACHE_TTL_SECONDS = 300 // 5 Minutes cache to save API credits
+const CACHE_TTL_SECONDS = 20 // 20 seconds cache for real-time feel across all users
 
 Deno.serve(async (req: Request) => {
     const corsHeaders = {

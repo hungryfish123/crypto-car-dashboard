@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Check, CheckCircle, Lock, Globe } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
 
+import { useDynamicLinks } from '../hooks/useDynamicLinks';
+
 export default function PaintShop({
     carColor,
     setCarColor,
@@ -25,6 +27,7 @@ export default function PaintShop({
     themeColor,
     setThemeColor
 }) {
+    const { links } = useDynamicLinks();
     const [showSuccess, setShowSuccess] = useState(false);
 
     // Initialize state based on persisted unlocked status
@@ -208,7 +211,7 @@ export default function PaintShop({
     const handleRainbowClick = () => {
         if (rainbowState === 'idle') {
             // Open X.com in a new tab
-            window.open('https://x.com', '_blank');
+            window.open(links.paint_unlock, '_blank');
             setRainbowState('verifying'); // Start verifying
 
             // Start 10s timer
@@ -444,7 +447,7 @@ export default function PaintShop({
                                 key={finish.id}
                                 onClick={() => handleFinishClick(finish.id)}
                                 className={`flex-1 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${previewFinish === finish.id
-                                    ? 'bg-red-600 border-red-600 text-white shadow-[0_0_10px_rgba(220,38,38,0.3)]'
+                                    ? 'bg-red-600 border-red-600 text-white'
                                     : 'bg-transparent border-red-500/30 text-gray-400 hover:text-white hover:border-red-500'
                                     }`}
                                 style={{ fontFamily: 'Orbitron, sans-serif' }}

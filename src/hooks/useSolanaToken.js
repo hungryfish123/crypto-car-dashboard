@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { fetchTokenData, fetchHolderCount, fetchTokenChartData } from '../services/tokenDataService';
+import { supabase } from '../supabaseClient';
 
-const TOKEN_ADDRESS = "FgxMYCKfAGw4eNq9fpxHoxjCpnzJZaqyLbnTRQaXpump";
+// All pump.fun tokens have 1 billion supply
+const PUMP_FUN_SUPPLY = 1_000_000_000;
 
 export function useSolanaToken() {
     const [data, setData] = useState({
@@ -17,43 +18,89 @@ export function useSolanaToken() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // Fetch basic token data (Price, MC, etc.) using our service (JUP/DexScreener)
-                const tokenData = await fetchTokenData(TOKEN_ADDRESS);
+                const moralisApiKey = import.meta.env.VITE_MORALIS_API_KEY;
 
-                // Fetch holder count (mocked/impl in service)
-                const holderCount = await fetchHolderCount(TOKEN_ADDRESS);
+                if (!moralisApiKey) {
+                    console.error('[useSolanaToken] VITE_MORALIS_API_KEY not set');
+                    setData(prev => ({ ...prev, loading: false, error: 'API key not configured' }));
+                    return;
+                }
 
-                // Fetch chart data (reconstructed from intervals)
-                const chartData = await fetchTokenChartData(TOKEN_ADDRESS);
+                // Get the CA from the 'main_chart' row in item_mappings
+                const { data: mapping, error: dbError } = await supabase
+                    .from('item_mappings')
+                    .select('contract_address')
+                    .eq('item_id', 'main_chart')
+                    .single();
 
-                // Mock top holders since we removed Moralis direct dependency here for simplicity
-                // or we can keep using the previous logic if strictly needed, but the service abstraction is cleaner.
-                // Let's create dummy holders for display if we don't have real ones, or fetch if available.
-                // For now, let's just use the count. The panel displays "Top 5 Holders", so we need an array.
-                // Let's just generate mock addresses for visual consistency as the previous implementation had a specific visual style.
-                const mockHolders = Array(5).fill(0).map(() => ({
-                    address: 'Wait...' + Math.random().toString(36).substring(7),
-                    amount: 0
-                }));
+                if (dbError) {
+                    console.error('[useSolanaToken] DB error:', dbError);
+                    setData(prev => ({ ...prev, loading: false, error: 'main_chart row not found' }));
+                    return;
+                }
+
+                const tokenAddress = mapping?.contract_address;
+
+                if (!tokenAddress) {
+                    console.log('[useSolanaToken] No CA set for main_chart yet');
+                    setData(prev => ({ ...prev, loading: false, error: 'No CA configured' }));
+                    return;
+                }
+
+                console.log('[useSolanaToken] Fetching price for:', tokenAddress);
+
+                // Get price from Moralis
+                const response = await fetch(
+                    `https://solana-gateway.moralis.io/token/mainnet/${tokenAddress}/price`,
+                    { headers: { 'X-API-Key': moralisApiKey } }
+                );
+
+                if (!response.ok) {
+                    throw new Error(`Moralis API error: ${response.status}`);
+                }
+
+                const priceData = await response.json();
+                console.log('[useSolanaToken] Moralis response:', priceData);
+
+                const price = parseFloat(priceData.usdPrice) || 0;
+                const change24h = priceData.usdPrice24hrPercentChange || 0;
+
+                // Market cap = price * 1 billion (all pump.fun tokens have 1B supply)
+                const marketCap = price * PUMP_FUN_SUPPLY;
+                console.log('[useSolanaToken] Price:', price, 'Market Cap:', marketCap);
+
+                // Build chart data
+                const pastPrice = change24h !== 0 ? price / (1 + (change24h / 100)) : price * 0.95;
+                const chartData = {
+                    points: [
+                        { time: '24h', price: pastPrice },
+                        { time: '12h', price: pastPrice + (price - pastPrice) * 0.3 },
+                        { time: '6h', price: pastPrice + (price - pastPrice) * 0.6 },
+                        { time: '1h', price: pastPrice + (price - pastPrice) * 0.9 },
+                        { time: 'Now', price: price }
+                    ],
+                    isPositive: change24h >= 0,
+                    percentChange24h: change24h
+                };
 
                 setData({
-                    price: tokenData?.priceUsd || 0,
-                    marketCap: tokenData?.marketCap || 0,
-                    holders: mockHolders, // Placeholder until we hook up a real holder API if needed
+                    price: price,
+                    marketCap: marketCap,
+                    holders: [],
                     chartData,
-                    priceChange24h: tokenData?.priceChange24h || 0,
+                    priceChange24h: change24h,
                     loading: false,
-                    error: !tokenData ? "Data Unavailable" : null
+                    error: null
                 });
 
             } catch (e) {
-                console.error("Token Hook Error:", e);
+                console.error("[useSolanaToken] Error:", e);
                 setData(prev => ({ ...prev, loading: false, error: e.message }));
             }
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 15000); // 15s refresh
+        const interval = setInterval(fetchData, 20000);
         return () => clearInterval(interval);
 
     }, []);

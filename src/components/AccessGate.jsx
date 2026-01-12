@@ -63,7 +63,7 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                     exit={{ opacity: 0, transition: { duration: 0.8, ease: "easeInOut" } }}
                     className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden bg-black"
                 >
-                    {/* Background Video */}
+                    {/* Background Video - Lazy loaded for LCP optimization */}
                     <div className="absolute inset-0 w-full h-full">
                         <div className="absolute inset-0 bg-black/60 z-10 backdrop-blur-[2px]" />
                         <video
@@ -71,10 +71,11 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                             muted
                             loop
                             playsInline
+                            preload="metadata"
+                            poster="/backgrounds/access_poster.webp"
                             className="w-full h-full object-cover"
                         >
                             <source src="/backgrounds/access_bg.webm" type="video/webm" />
-
                         </video>
                     </div>
 

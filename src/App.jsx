@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import * as THREE from 'three';
 import { AppleStyleDock } from './components/AppleStyleDock';
 import GarageHUD from './components/GarageHUD';
+import { useDynamicLinks } from './hooks/useDynamicLinks';
+import { useRewardRate } from './hooks/useRewardRate'; // New Hook
 import LoginButton from './components/LoginButton';
 import { usePrivy } from '@privy-io/react-auth';
 import { fetchUserData, saveUserData } from './dbServices';
@@ -668,6 +670,7 @@ class ErrorBoundary extends React.Component {
 
 function App() {
   const { user, authenticated } = usePrivy();
+  const { links } = useDynamicLinks();
   const [activePage, setActivePage] = useState('Garage');
   const [initialSelectedItem, setInitialSelectedItem] = useState(null);
   const [earnings, setEarnings] = useState(0); // Using this as 'Cash' for now
@@ -677,6 +680,8 @@ function App() {
   const [earningRate, setEarningRate] = useState(0.00001);
 
   const [specialEffect, setSpecialEffect] = useState(null); // 'rainbow', 'galaxy', or null
+  const [isIntroComplete, setIsIntroComplete] = useState(false);
+  const { rate: rewardRate } = useRewardRate(); // Get reward rate
   const [isDataLoaded, setIsDataLoaded] = useState(false); // Validates when data is fully synchronized
   const [userTokenBalances, setUserTokenBalances] = useState({}); // Map of contract address -> balance
 
@@ -1169,7 +1174,7 @@ function App() {
   const [carFinish, setCarFinish] = useState('glossy'); // 'glossy', 'matte', 'metallic'
   const [activeTab, setActiveTab] = useState('color'); // 'color', 'finish'
 
-  // Wrapper setters that also cache to localStorage
+  // Wrapper setters that also caches to localStorage
   const setCarColor = (color) => {
     setCarColorState(color);
     try { localStorage.setItem('cached_car_color', color); } catch { }
@@ -1685,17 +1690,13 @@ function App() {
             setDraggedItem={setDraggedItem}
             draggedItem={draggedItem}
             setSceneBackground={setSceneBackground}
-            // New Earnings Props
-            earnings={earnings}
             pendingRewards={pendingRewards}
             onRewardsClaimed={() => setPendingRewards(0)}
             hourlyEarnings={
-              // Calculate total yield from all equipped parts on current car
-              Object.values(equippedPartsByCar[currentCarModel.id] || {}).reduce((total, part) => {
-                if (!part) return total;
-                const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
-                return total + yieldVal;
-              }, 0).toFixed(4)
+              inventory.reduce((total, item) => {
+                const yieldVal = parseFloat((item.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
+                return total + (yieldVal * (item.quantity || 1));
+              }, 0) * rewardRate // Multiply total points by reward rate to get SOL
             }
             onNavigateToItem={(item) => {
               setInitialSelectedItem(item);
@@ -1768,13 +1769,18 @@ function App() {
             </p>
 
             {/* Notify Button */}
-            <button className="group relative px-12 py-4 bg-transparent border border-white/20 hover:border-red-600 text-white overflow-hidden transition-all duration-300 rounded-lg">
+            <a
+              href={links.race_notify}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative px-12 py-4 bg-transparent border border-white/20 text-white overflow-hidden transition-all duration-300 rounded-lg block w-fit mx-auto cursor-pointer hover:border-white/40"
+            >
               <div className="absolute inset-0 w-full h-full bg-red-600 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out z-0"></div>
               <span className="relative z-10 font-bold uppercase tracking-widest text-lg flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                 <Bell size={20} />
                 Notify When Live
               </span>
-            </button>
+            </a>
 
             {/* Footer Text */}
             <div className="mt-8 text-xs text-gray-400 font-mono flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>

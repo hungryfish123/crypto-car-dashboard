@@ -131,7 +131,7 @@ const CarModelSelector = ({ currentModelIndex = 0, onModelChange, ownedCars = []
 
         // Otherwise open buy link
         if (contractAddress) {
-            window.open(`https://jup.ag/swap/SOL-${contractAddress}`, '_blank');
+            window.open(`https://raydium.io/swap/?inputMint=So11111111111111111111111111111111111111112&outputMint=${contractAddress}`, '_blank');
         } else {
             alert("Token contract not yet launched for this car. Check back soon!");
         }

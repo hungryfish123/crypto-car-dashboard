@@ -7,7 +7,10 @@ import InteractiveLogo from './InteractiveLogo';
 import { supabase } from '../supabaseClient';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, earnings, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem }) => {
+import { useDynamicLinks } from '../hooks/useDynamicLinks';
+
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem }) => {
+    const { links } = useDynamicLinks();
     const { playHover } = useAudio();
 
     const getRarityStyles = (level) => {
@@ -62,7 +65,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
 
                 {/* X Logo with hover effect */}
                 <a
-                    href="https://x.com"
+                    href={links.social_x}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block relative group cursor-pointer h-7 w-7"
@@ -83,7 +86,6 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
             </div>
 
             <SolanaPanel
-                earnings={earnings}
                 pendingRewards={pendingRewards}
                 hourlyEarnings={hourlyEarnings}
                 onRewardsClaimed={onRewardsClaimed}

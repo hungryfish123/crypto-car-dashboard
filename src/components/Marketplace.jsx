@@ -9,7 +9,10 @@ import { supabase } from '../supabaseClient';
 import { useTokenMetrics } from '../hooks/useTokenMetrics';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
+import { useDynamicLinks } from '../hooks/useDynamicLinks';
+
 const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clearInitialItem, carColor }) => {
+    const { links } = useDynamicLinks();
     const [activeCategory, setActiveCategory] = useState('All');
     const [selectedItem, setSelectedItem] = useState(initialSelectedItem || null);
     const [items, setItems] = useState(MARKETPLACE_ITEMS);
@@ -188,7 +191,7 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
 
                     {/* X Logo with hover effect */}
                     <a
-                        href="https://x.com"
+                        href={links.social_x}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block relative group cursor-pointer h-6 w-6"

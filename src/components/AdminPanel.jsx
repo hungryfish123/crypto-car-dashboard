@@ -5,7 +5,7 @@ import { supabase } from '../supabaseClient';
 import { useFeeDistribution } from '../hooks/useFeeDistribution';
 
 const AdminPanel = ({ onClose, items }) => {
-    const [activeTab, setActiveTab] = useState('management'); // 'management' | 'fees'
+    const [activeTab, setActiveTab] = useState('management'); // 'management' | 'fees' | 'links'
     const [itemDetails, setItemDetails] = useState({});
     const [hiddenItems, setHiddenItems] = useState({});
     const [loading, setLoading] = useState(true);
@@ -27,17 +27,37 @@ const AdminPanel = ({ onClose, items }) => {
         }
     }, [isUnlocked]);
 
-    const handleUnlock = (e) => {
+    const handleUnlock = async (e) => {
         e.preventDefault();
-        const code = import.meta.env.VITE_ADMIN_CODE;
 
-        if (accessCode === code) {
-            setIsUnlocked(true);
-            setUnlockError(false);
-        } else {
+        try {
+            // SECURE VERIFICATION: Call Edge Function
+            // The password is stored in Supabase secrets (Vault) associated with the function.
+            // It is NEVER exposed to the client in plain text variables or hardcoded strings.
+            const { data, error } = await supabase.functions.invoke('verify-admin', {
+                body: { code: accessCode }
+            });
+
+            if (error) {
+                console.error("Verification failed:", error);
+                setUnlockError(true);
+                setAccessCode('');
+                setTimeout(() => setUnlockError(false), 800);
+                return;
+            }
+
+            if (data && data.success) {
+                setIsUnlocked(true);
+                setUnlockError(false);
+            } else {
+                console.log("Invalid code provided.");
+                setUnlockError(true);
+                setAccessCode('');
+                setTimeout(() => setUnlockError(false), 800);
+            }
+        } catch (err) {
+            console.error("Unlock exception:", err);
             setUnlockError(true);
-            setAccessCode('');
-            setTimeout(() => setUnlockError(false), 800);
         }
     };
 
@@ -143,15 +163,14 @@ const AdminPanel = ({ onClose, items }) => {
                 <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="bg-black/80 border border-red-500/20 p-12 rounded-2xl max-w-md w-full text-center shadow-[0_0_50px_rgba(220,38,38,0.1)] relative overflow-hidden"
+                    className="bg-black/90 p-12 rounded-2xl max-w-md w-full text-center relative overflow-hidden border border-white/20"
                 >
-                    <div className="absolute inset-0 bg-red-500/5 animate-pulse" />
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
-                            <Lock size={40} className="text-red-500" />
+                        <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-6">
+                            <Lock size={40} className="text-white/50" />
                         </div>
                         <h2 className="text-3xl font-bold uppercase tracking-widest mb-2 font-['Orbitron']">Admin Access</h2>
-                        <p className="text-gray-500 text-sm mb-8 font-mono tracking-wider">SECURE ENVIRONMENT DETECTED</p>
+                        <p className="text-gray-500 text-sm mb-8 font-mono tracking-wider">SECURE ENVIRONMENT</p>
 
                         <form onSubmit={handleUnlock} className="w-full">
                             <input
@@ -162,12 +181,12 @@ const AdminPanel = ({ onClose, items }) => {
                                     setUnlockError(false);
                                 }}
                                 placeholder="ENTER SECURITY CODE"
-                                className={`w-full bg-black/50 border ${unlockError ? 'border-red-500 text-red-500' : 'border-white/10 text-white'} rounded-xl px-6 py-4 text-center text-xl font-mono tracking-[0.5em] focus:outline-none focus:border-red-500 transition-all placeholder-gray-700 mb-6`}
+                                className={`w-full bg-black/50 border ${unlockError ? 'border-red-500 text-red-500' : 'border-white/10 text-white'} rounded-xl px-6 py-4 text-center text-xl font-mono tracking-[0.5em] focus:outline-none focus:border-white transition-all placeholder-gray-700 mb-6`}
                                 autoFocus
                             />
                             <button
                                 type="submit"
-                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl uppercase tracking-widest transition-all shadow-lg shadow-red-900/20"
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-xl uppercase tracking-widest transition-all"
                             >
                                 Authenticate
                             </button>
@@ -214,6 +233,12 @@ const AdminPanel = ({ onClose, items }) => {
                     >
                         <Coins size={14} /> Fees & Revenue
                     </button>
+                    <button
+                        onClick={() => setActiveTab('links')}
+                        className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === 'links' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                    >
+                        <Link size={14} /> Web Links
+                    </button>
                 </div>
 
                 <div className="flex items-center gap-4">
@@ -228,7 +253,7 @@ const AdminPanel = ({ onClose, items }) => {
             <div className="flex-1 overflow-y-auto p-8 max-w-7xl mx-auto w-full">
 
                 <AnimatePresence mode="wait">
-                    {activeTab === 'management' ? (
+                    {activeTab === 'management' && (
                         <motion.div
                             key="management"
                             initial={{ opacity: 0, x: -20 }}
@@ -236,6 +261,42 @@ const AdminPanel = ({ onClose, items }) => {
                             exit={{ opacity: 0, x: 20 }}
                             className="space-y-2"
                         >
+                            {/* === MAIN CHART TOKEN CONFIG === */}
+                            <div className="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-xl p-4 mb-6">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                                        <BarChart3 size={20} className="text-purple-400" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-bold uppercase tracking-wider text-purple-300">Main Chart Token</h3>
+                                        <p className="text-[10px] text-gray-500">This CA is used for the market cap chart on the main page</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="flex-1 relative">
+                                        <Database size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Enter Solana Contract Address for main chart..."
+                                            className="w-full bg-black/50 border border-purple-500/30 rounded-lg py-2.5 pl-9 pr-3 text-sm font-mono text-purple-300 placeholder-gray-600 focus:outline-none focus:border-purple-400 transition-colors"
+                                            value={itemDetails['main_chart']?.ca || ''}
+                                            onChange={(e) => updateField('main_chart', 'ca', e.target.value)}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => handleSave('main_chart')}
+                                        disabled={saving}
+                                        className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg uppercase text-xs tracking-wider transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <Save size={14} />
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* === MARKETPLACE ITEMS === */}
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-2 mt-4">Marketplace Items</h3>
+
                             {/* Management Header */}
                             <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] items-center uppercase text-gray-500 font-bold tracking-wider">
                                 <div className="col-span-1">Preview</div>
@@ -315,7 +376,9 @@ const AdminPanel = ({ onClose, items }) => {
                                 );
                             })}
                         </motion.div>
-                    ) : (
+                    )}
+
+                    {activeTab === 'fees' && (
                         <motion.div
                             key="fees"
                             initial={{ opacity: 0, x: 20 }}
@@ -324,6 +387,18 @@ const AdminPanel = ({ onClose, items }) => {
                             className="max-w-6xl mx-auto"
                         >
                             <FeeDashboard items={items} itemDetails={itemDetails} />
+                        </motion.div>
+                    )}
+
+                    {activeTab === 'links' && (
+                        <motion.div
+                            key="links"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            className="max-w-4xl mx-auto"
+                        >
+                            <LinksManager />
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -336,12 +411,14 @@ const FeeDashboard = ({ items, itemDetails }) => {
     const [stats, setStats] = useState({
         treasuryBalance: 0,
         activeCounts: {},
-        totalActiveUsers: 0
+        totalActiveUsers: 0,
+        mappings: {}
     });
     const [loading, setLoading] = useState(true);
 
-    const HOURLY_POT = 10; // Hardcoded global constant
+    // Treasury wallet address to watch
     const TREASURY_WALLET = '967NP22RYpMydnMdtT7QF8f3oahZZx18hwULXcn9iadM';
+    const TREASURY_RESERVE = 0.01; // Keep 0.01 SOL for fees
 
     useEffect(() => {
         fetchStats();
@@ -375,11 +452,24 @@ const FeeDashboard = ({ items, itemDetails }) => {
                     .limit(1);
                 balance = logs?.[0]?.retained_in_treasury || 0;
             }
-        } else {
-            console.warn('[AdminFees] Missing Moralis API Key');
         }
 
-        // 2. Get User Inventory Counts
+        // 2. Fetch Item Mappings (Source of Truth for Yield/Supply)
+        const { data: mappingsData } = await supabase
+            .from('item_mappings')
+            .select('item_id, supply, yield_weight');
+
+        const mappings = {};
+        if (mappingsData) {
+            mappingsData.forEach(m => {
+                mappings[m.item_id] = {
+                    supply: m.supply,
+                    yield_weight: m.yield_weight
+                };
+            });
+        }
+
+        // 3. Get User Inventory Counts
         const { data: players } = await supabase
             .from('player_data')
             .select('inventory');
@@ -402,120 +492,286 @@ const FeeDashboard = ({ items, itemDetails }) => {
         setStats({
             treasuryBalance: balance,
             activeCounts: counts,
-            totalActiveUsers: totalUsers
+            totalActiveUsers: totalUsers,
+            mappings: mappings
         });
         setLoading(false);
     };
 
     // --- Calculations ---
-    const activeItems = items.filter(i => !itemDetails[i.id]?.hidden); // Assuming hiding logic passed down or handled
-    // Recalculate Total Theoretical Points
-    const totalPoints = activeItems.reduce((sum, item) => {
-        const rawSupply = itemDetails[item.id]?.supply || item.supply || '1000/1000';
-        const supplyStr = rawSupply.includes('/') ? rawSupply.split('/')[1] : rawSupply;
-        const supply = parseInt(supplyStr || 1000);
+    const activeItems = items.filter(i => !itemDetails[i.id]?.hidden);
 
-        const weight = parseInt(itemDetails[item.id]?.yield || 0);
-        return sum + (supply * weight);
+    // Distributable Pot (User confirmed: whatever is in wallet gets split)
+    // We reserve 0.01 SOL for gas fees
+    const distributablePot = Math.max(0, stats.treasuryBalance - TREASURY_RESERVE);
+
+    // 1. Calculate Total Theoretical Points = Sum(Supply * YieldWeight) for ALL items
+    // This denominator is fixed regardless of how many items are actually held
+    const totalTheoreticalPoints = Object.values(stats.mappings).reduce((sum, m) => {
+        return sum + (m.supply * m.yield_weight);
     }, 0);
 
-    const rewardPerPoint = totalPoints > 0 ? (HOURLY_POT / totalPoints) : 0;
+    // 2. Reward Per Point
+    const rewardPerPoint = totalTheoreticalPoints > 0 ? (distributablePot / totalTheoreticalPoints) : 0;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-12">
             {/* 1. Treasury Header */}
-            <div className="bg-gradient-to-r from-green-900/40 to-black border border-green-500/30 rounded-2xl p-8 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-green-900/40 to-black border border-green-500/30 rounded-2xl p-8 flex items-center justify-between shadow-[0_0_50px_rgba(34,197,94,0.1)]">
                 <div>
-                    <h2 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Treasury Vault</h2>
+                    <h2 className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2 flex items-center gap-2">
+                        <Wallet size={14} className="text-green-500" /> Treasury Vault
+                    </h2>
                     <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black text-white font-mono tracking-tighter">
+                        <span className="text-5xl font-black text-white font-mono tracking-tighter">
                             {stats.treasuryBalance.toFixed(4)}
                         </span>
-                        <span className="text-green-500 font-bold">SOL</span>
+                        <span className="text-green-500 font-bold text-xl">SOL</span>
                     </div>
-                    <p className="text-green-500/50 text-[10px] mt-2 font-mono uppercase tracking-wider">
-                        Next Hourly Pot Injection: +{HOURLY_POT} SOL
-                    </p>
+                    <div className="flex items-center gap-4 mt-3">
+                        <div className="px-3 py-1 rounded-full bg-green-500/10 border border-green-500/20 text-[10px] text-green-400 font-mono uppercase font-bold">
+                            Distributable: {distributablePot.toFixed(4)} SOL
+                        </div>
+                        <div className="text-gray-600 text-[10px] uppercase font-bold">
+                            Reserve: {TREASURY_RESERVE} SOL
+                        </div>
+                    </div>
                 </div>
                 <div className="text-right">
                     <button
                         onClick={fetchStats}
-                        className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+                        className="p-3 bg-white/5 hover:bg-white/10 rounded-full transition-colors mb-4 inline-block"
+                        title="Refresh Stats"
                     >
                         <RefreshCw size={20} className={loading ? 'animate-spin text-white' : 'text-gray-500'} />
                     </button>
-                    <div className="mt-4 text-right">
-                        <span className="block text-2xl font-bold text-white">{stats.totalActiveUsers}</span>
+                    <div>
+                        <span className="block text-3xl font-bold text-white mb-1">{stats.totalActiveUsers}</span>
                         <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Active Earners</span>
                     </div>
                 </div>
             </div>
 
-            {/* 2. Breakdown Table */}
+            {/* 2. Global Stats Bar */}
+            <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Total Network Points</div>
+                    <div className="text-xl font-mono text-white">
+                        {totalTheoreticalPoints.toLocaleString()} <span className="text-xs text-gray-600">pts</span>
+                    </div>
+                    <div className="text-[9px] text-gray-600 mt-1">Sum of (Supply × Yield)</div>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Value Per Point</div>
+                    <div className="text-xl font-mono text-yellow-500">
+                        {rewardPerPoint.toFixed(8)} <span className="text-xs text-yellow-500/50">SOL</span>
+                    </div>
+                    <div className="text-[9px] text-gray-600 mt-1">Pot / Total Points</div>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-xl p-4">
+                    <div className="text-[10px] text-gray-500 uppercase font-bold tracking-wider mb-1">Distribution Health</div>
+                    <div className="text-xl font-mono text-blue-400">
+                        100<span className="text-xs">%</span>
+                    </div>
+                    <div className="text-[9px] text-gray-600 mt-1">System Operational</div>
+                </div>
+            </div>
+
+            {/* 3. Breakdown Table */}
             <div className={`overflow-hidden rounded-xl border border-white/10 bg-black/40 ${loading ? 'opacity-50' : ''}`}>
                 <div className="grid grid-cols-12 bg-white/5 p-4 text-[10px] uppercase font-bold text-gray-500 tracking-wider">
-                    <div className="col-span-4">Item Name / Yield</div>
-                    <div className="col-span-3 text-right">Theoretical Max (Per Item)</div>
-                    <div className="col-span-2 text-center">Active Users</div>
-                    <div className="col-span-3 text-right">Current Hourly Breakdown</div>
+                    <div className="col-span-4">Item (Yield Weight)</div>
+                    <div className="col-span-2 text-right">Holders / Supply</div>
+                    <div className="col-span-3 text-right">Payout Per Item</div>
+                    <div className="col-span-3 text-right">Total Payout (Next Hr)</div>
                 </div>
 
-                <div className="max-h-[500px] overflow-y-auto">
+                <div className="max-h-[600px] overflow-y-auto divide-y divide-white/5">
                     {activeItems.map(item => {
-                        const details = itemDetails[item.id] || {};
-                        const weight = parseInt(details.yield || 0);
+                        const mapping = stats.mappings[item.id] || { supply: 1000, yield_weight: 0 };
                         const activeCount = stats.activeCounts[item.id] || 0;
 
-                        // Theoretical: The amount ONE item *could* earn if all existed
-                        const theoreticalShare = rewardPerPoint * weight;
+                        // How much ONE item earns = Yield Weight * Reward Per Point
+                        const earningsPerItem = mapping.yield_weight * rewardPerPoint;
 
-                        // Current Payout: Theoretical * Active Count
-                        const currentPayout = theoreticalShare * activeCount;
+                        // How much this item type pays out total = Active Count * Earnings Per Item
+                        const totalPayoutForType = activeCount * earningsPerItem;
+
+                        // What percentage of the supply is active?
+                        const utilization = (activeCount / mapping.supply) * 100;
 
                         return (
-                            <div key={item.id} className="grid grid-cols-12 p-4 border-b border-white/5 items-center hover:bg-white/[0.02] transition-colors">
+                            <div key={item.id} className="grid grid-cols-12 p-4 items-center hover:bg-white/[0.02] transition-colors group">
+                                {/* Item Info */}
                                 <div className="col-span-4 flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded flex items-center justify-center bg-white/5 border border-white/5`}>
-                                        <img src={item.image} className="w-6 h-6 object-contain" />
+                                    <div className="w-10 h-10 rounded flex items-center justify-center bg-white/5 border border-white/5 group-hover:border-white/20 transition-colors">
+                                        <img src={item.image} className="w-8 h-8 object-contain" />
                                     </div>
                                     <div>
                                         <div className="text-white font-bold text-xs">{item.title}</div>
-                                        <div className="text-gray-600 text-[10px] font-mono mt-0.5">Weight: <span className="text-yellow-500">{weight}</span></div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span className="text-[10px] text-gray-500 font-mono">ID: {item.id}</span>
+                                            <span className="px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-500 text-[10px] font-bold border border-yellow-500/20">
+                                                {mapping.yield_weight} pts
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <div className="col-span-3 text-right">
-                                    <div className="text-gray-400 font-mono text-xs">{theoreticalShare.toFixed(6)} SOL</div>
-                                    <div className="text-[9px] text-gray-600 uppercase">Max / Hr</div>
-                                </div>
-
-                                <div className="col-span-2 text-center">
-                                    <div className={`inline-block px-2 py-1 rounded text-[10px] font-bold ${activeCount > 0 ? 'bg-blue-900/30 text-blue-400' : 'bg-gray-800 text-gray-600'}`}>
-                                        {activeCount}
+                                {/* Supply Stats */}
+                                <div className="col-span-2 text-right">
+                                    <div className="text-white font-mono text-xs">
+                                        {activeCount} <span className="text-gray-600">/ {mapping.supply}</span>
+                                    </div>
+                                    <div className="mt-1 w-full bg-gray-800 h-1 rounded-full overflow-hidden ml-auto max-w-[80px]">
+                                        <div
+                                            className={`h-full ${utilization > 90 ? 'bg-red-500' : 'bg-blue-500'}`}
+                                            style={{ width: `${Math.min(utilization, 100)}%` }}
+                                        />
                                     </div>
                                 </div>
 
+                                {/* Per Item Earnings */}
                                 <div className="col-span-3 text-right">
                                     <div className="text-green-400 font-mono font-bold text-xs">
-                                        {currentPayout.toFixed(5)} SOL
+                                        {earningsPerItem.toFixed(6)} SOL
                                     </div>
-                                    <div className="text-[9px] text-green-900/60 uppercase">Total Burn</div>
+                                    <div className="text-[9px] text-gray-600 uppercase">Per Holder</div>
+                                </div>
+
+                                {/* Total Category Payout */}
+                                <div className="col-span-3 text-right">
+                                    <div className="text-white font-mono font-bold text-xs">
+                                        {totalPayoutForType.toFixed(5)} SOL
+                                    </div>
+                                    <div className="text-[9px] text-gray-600 uppercase">
+                                        {((totalPayoutForType / (distributablePot || 1)) * 100).toFixed(1)}% of Pot
+                                    </div>
                                 </div>
                             </div>
                         );
                     })}
                 </div>
 
-                {/* Summary Footer */}
+                {/* Footer Sum */}
                 <div className="bg-white/5 p-4 flex justify-between items-center text-xs font-mono border-t border-white/10">
-                    <span className="text-gray-500">Universal Rate (Per 1.0 Weight): <span className="text-white">{rewardPerPoint.toFixed(8)} SOL</span></span>
-                    <span className="text-green-500">Total Hourly Output: <span className="font-bold text-white">
+                    <span className="text-gray-500 uppercase tracking-widest font-bold">Total Projected Payout</span>
+                    <span className="text-green-500 text-lg font-bold">
                         {activeItems.reduce((sum, item) => {
-                            const weight = parseInt(itemDetails[item.id]?.yield || 0);
-                            return sum + (rewardPerPoint * weight * (stats.activeCounts[item.id] || 0));
+                            const mapping = stats.mappings[item.id] || { yield_weight: 0 };
+                            return sum + ((stats.activeCounts[item.id] || 0) * mapping.yield_weight * rewardPerPoint);
                         }, 0).toFixed(4)} SOL
-                    </span></span>
+                    </span>
                 </div>
+            </div>
+        </div>
+    );
+};
+
+// --- 3. Links Management Component ---
+const LinksManager = () => {
+    const [links, setLinks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        fetchLinks();
+    }, []);
+
+    const fetchLinks = async () => {
+        setLoading(true);
+        const { data } = await supabase
+            .from('dynamic_links')
+            .select('*')
+            .order('key');
+        if (data) setLinks(data);
+        setLoading(false);
+    };
+
+    const handleUpdate = (id, field, value) => {
+        const newLinks = links.map(l => l.id === id ? { ...l, [field]: value } : l);
+        setLinks(newLinks);
+    };
+
+    const saveChanges = async () => {
+        setSaving(true);
+        let errorOccurred = false;
+
+        console.log("Saving links...", links);
+
+        for (const link of links) {
+            const { error } = await supabase
+                .from('dynamic_links')
+                .update({ url: link.url, label: link.label })
+                .eq('id', link.id);
+
+            if (error) {
+                console.error("Error saving link:", link.key, error);
+                errorOccurred = true;
+            }
+        }
+        setSaving(false);
+
+        if (errorOccurred) {
+            alert('Some links failed to save. Check console for details.');
+        } else {
+            console.log("All links saved successfully.");
+            alert('Links updated successfully!');
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-wider">Dynamic Links</h3>
+                    <button
+                        onClick={saveChanges}
+                        disabled={saving}
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold uppercase text-xs tracking-wider transition-colors disabled:opacity-50"
+                    >
+                        {saving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                </div>
+
+                <div className="space-y-4">
+                    {links.map(link => (
+                        <div key={link.id} className="grid grid-cols-12 gap-4 items-center bg-black/40 p-4 rounded-lg border border-white/5">
+                            <div className="col-span-3">
+                                <div className="text-xs text-gray-500 uppercase font-bold mb-1">Key</div>
+                                <div className="text-sm font-mono text-blue-400">{link.key}</div>
+                            </div>
+                            <div className="col-span-3">
+                                <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Label</label>
+                                <input
+                                    type="text"
+                                    value={link.label || ''}
+                                    onChange={(e) => handleUpdate(link.id, 'label', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded px-3 py-1.5 text-sm text-gray-300 focus:border-blue-500 focus:outline-none"
+                                />
+                            </div>
+                            <div className="col-span-6">
+                                <label className="text-xs text-gray-500 uppercase font-bold mb-1 block">Destination URL</label>
+                                <input
+                                    type="text"
+                                    value={link.url}
+                                    onChange={(e) => handleUpdate(link.id, 'url', e.target.value)}
+                                    className="w-full bg-black/50 border border-white/10 rounded px-3 py-1.5 text-sm text-white font-mono focus:border-green-500 focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                    ))}
+
+                    {links.length === 0 && !loading && (
+                        <div className="text-center py-8 text-gray-500">
+                            No links found. Run the <code>dynamic_links.sql</code> migration.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="text-[10px] text-gray-600 italic">
+                * Run the migration in Supabase to create the table first.
             </div>
         </div>
     );

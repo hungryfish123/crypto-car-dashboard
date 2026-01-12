@@ -7,12 +7,15 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
+import { Connection, PublicKey, LAMPORTS_PER_SOL, Keypair } from "https://esm.sh/@solana/web3.js@1.87.6";
+import { decode as decodeBase58 } from "https://deno.land/std@0.208.0/encoding/base58.ts";
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-const HOURLY_REWARD_POT = 10; // SOL (or any unit you choose)
+// Minimum balance to keep in treasury (0.01 SOL for fees)
+const TREASURY_RESERVE = 0.01;
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -65,6 +68,8 @@ serve(async (req: Request) => {
     // Initialize Supabase client with service role (for elevated permissions)
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const treasuryPrivateKey = Deno.env.get("TREASURY_PRIVATE_KEY") ?? "";
+    const rpcUrl = Deno.env.get("HELIUS_RPC_URL") || "https://api.mainnet-beta.solana.com";
 
     if (!supabaseUrl || !supabaseServiceKey) {
         return new Response(
@@ -73,10 +78,52 @@ serve(async (req: Request) => {
         );
     }
 
+    if (!treasuryPrivateKey) {
+        return new Response(
+            JSON.stringify({ error: "Treasury private key not configured" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    // Parse treasury keypair
+    let treasuryKeypair: Keypair;
+    try {
+        const privateKeyBytes = decodeBase58(treasuryPrivateKey);
+        treasuryKeypair = Keypair.fromSecretKey(privateKeyBytes);
+    } catch {
+        return new Response(
+            JSON.stringify({ error: "Invalid treasury key format" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    // Get treasury balance from Solana
+    const connection = new Connection(rpcUrl, "confirmed");
+    const treasuryBalance = await connection.getBalance(treasuryKeypair.publicKey);
+    const treasuryBalanceSol = treasuryBalance / LAMPORTS_PER_SOL;
+
+    // Calculate distributable amount (balance minus reserve)
+    const distributableSol = Math.max(0, treasuryBalanceSol - TREASURY_RESERVE);
+
+    if (distributableSol <= 0) {
+        return new Response(
+            JSON.stringify({
+                success: false,
+                error: "Insufficient treasury balance",
+                treasury_balance: treasuryBalanceSol,
+                reserve: TREASURY_RESERVE
+            }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+    }
+
+    console.log(`💰 Treasury Balance: ${treasuryBalanceSol} SOL`);
+    console.log(`💰 Distributable: ${distributableSol} SOL (after ${TREASURY_RESERVE} SOL reserve)`);
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     try {
-        const result = await distributeRewards(supabase);
+        const result = await distributeRewards(supabase, distributableSol);
 
         return new Response(
             JSON.stringify(result),
@@ -102,9 +149,9 @@ serve(async (req: Request) => {
 // DISTRIBUTION LOGIC
 // =============================================================================
 
-async function distributeRewards(supabase: ReturnType<typeof createClient>): Promise<DistributionResult> {
+async function distributeRewards(supabase: ReturnType<typeof createClient>, rewardPot: number): Promise<DistributionResult> {
     console.log("🚀 Starting reward distribution...");
-    console.log(`💰 Hourly Reward Pot: ${HOURLY_REWARD_POT}`);
+    console.log(`💰 Reward Pot: ${rewardPot} SOL`);
 
     // -------------------------------------------------------------------------
     // STEP A: Calculate the Universal Constant (Denominator)
@@ -135,7 +182,7 @@ async function distributeRewards(supabase: ReturnType<typeof createClient>): Pro
     }
 
     // Calculate REWARD_PER_POINT
-    const REWARD_PER_POINT = HOURLY_REWARD_POT / TOTAL_THEORETICAL_POINTS;
+    const REWARD_PER_POINT = rewardPot / TOTAL_THEORETICAL_POINTS;
 
     console.log(`📊 Total Items: ${items.length}`);
     console.log(`📊 Total Theoretical Points: ${TOTAL_THEORETICAL_POINTS}`);
@@ -158,9 +205,9 @@ async function distributeRewards(supabase: ReturnType<typeof createClient>): Pro
         console.log("⚠️ No players found - skipping distribution");
         return {
             success: true,
-            total_pot_available: HOURLY_REWARD_POT,
+            total_pot_available: rewardPot,
             actual_distributed: 0,
-            retained_in_treasury: HOURLY_REWARD_POT,
+            retained_in_treasury: rewardPot,
             users_affected: 0,
             reward_per_point: REWARD_PER_POINT,
             total_theoretical_points: TOTAL_THEORETICAL_POINTS,
@@ -273,13 +320,13 @@ async function distributeRewards(supabase: ReturnType<typeof createClient>): Pro
     // STEP D: Log the Distribution
     // -------------------------------------------------------------------------
 
-    const retainedInTreasury = HOURLY_REWARD_POT - totalDistributed;
+    const retainedInTreasury = rewardPot - totalDistributed;
 
     const { error: logError } = await supabase
         .from("system_logs")
         .insert({
             event_type: "REWARD_DISTRIBUTION",
-            total_pot_available: HOURLY_REWARD_POT,
+            total_pot_available: rewardPot,
             actual_distributed: totalDistributed,
             retained_in_treasury: retainedInTreasury,
             users_affected: userPayouts.length,
@@ -301,7 +348,7 @@ async function distributeRewards(supabase: ReturnType<typeof createClient>): Pro
 
     const result: DistributionResult = {
         success: true,
-        total_pot_available: HOURLY_REWARD_POT,
+        total_pot_available: rewardPot,
         actual_distributed: Number(totalDistributed.toFixed(6)),
         retained_in_treasury: Number(retainedInTreasury.toFixed(6)),
         users_affected: userPayouts.length,

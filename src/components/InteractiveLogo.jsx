@@ -1,9 +1,12 @@
 import React from 'react';
+import { useDynamicLinks } from '../hooks/useDynamicLinks';
 
 const InteractiveLogo = ({ height = "h-10", color = "#EF4444" }) => {
+    const { links } = useDynamicLinks();
+
     return (
         <a
-            href="https://jup.ag/"
+            href={links.logo_redirect}
             target="_blank"
             rel="noopener noreferrer"
             className="block cursor-pointer group relative"

@@ -6,14 +6,31 @@
   <link rel="icon" type="image/webp" href="/favicon.webp" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Preconnect to Google Fonts for faster loading -->
+  <!-- Preconnect to critical third-party origins -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://ssxsjafkzuqikmobhihl.supabase.co" crossorigin />
+  <link rel="preconnect" href="https://auth.privy.io" crossorigin />
+  <link rel="preconnect" href="https://explorer-api.walletconnect.com" crossorigin />
+  <link rel="preconnect" href="https://solana-gateway.moralis.io" crossorigin />
 
-  <!-- Google Fonts -->
+  <!-- DNS Prefetch for additional origins -->
+  <link rel="dns-prefetch" href="https://api.mainnet-beta.solana.com" />
+
+  <!-- Preload critical font (most used weight) -->
+  <link rel="preload"
+    href="https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hjp-Ek-_EeA.woff2"
+    as="font" type="font/woff2" crossorigin />
+
+  <!-- Google Fonts - with display=swap for faster text rendering -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700&display=swap"
-    rel="stylesheet" />
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap"
+    rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap"
+      rel="stylesheet" />
+  </noscript>
 
   <!-- SEO -->
   <title>Gear.fun</title>
@@ -30,6 +47,26 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="/gear-fun-banner.png" />
+
+  <!-- Inline critical CSS for faster FCP -->
+  <style>
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: 'Inter', system-ui, sans-serif;
+      overflow: hidden;
+    }
+
+    #root {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
 </head>
 
 <body>

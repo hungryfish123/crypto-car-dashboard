@@ -34,17 +34,37 @@ export default defineConfig({
     }
   },
   build: {
-    target: 'esnext', // Support top-level await
+    target: 'esnext',
+    minify: 'terser', // Better minification than esbuild
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
-          'three-vendor': ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing'],
-          'solana-vendor': ['@solana/web3.js', '@solana/spl-token', '@solana/wallet-adapter-react', '@solana/kit'],
-          'ui-vendor': ['framer-motion', 'lucide-react', 'howler'],
-          'auth-vendor': ['@supabase/supabase-js', '@privy-io/react-auth']
+          // Core Three.js - largest chunk, loaded only when needed
+          'three-core': ['three'],
+          'three-fiber': ['@react-three/fiber', '@react-three/drei'],
+          'three-post': ['@react-three/postprocessing'],
+          // Solana - separate for wallet operations
+          'solana-core': ['@solana/web3.js'],
+          'solana-spl': ['@solana/spl-token'],
+          'solana-wallet': ['@solana/wallet-adapter-react', '@solana/kit'],
+          // UI - commonly used
+          'ui-framer': ['framer-motion'],
+          'ui-icons': ['lucide-react'],
+          'ui-audio': ['howler'],
+          // Auth - loaded after initial render
+          'auth-supabase': ['@supabase/supabase-js'],
+          'auth-privy': ['@privy-io/react-auth']
         }
       }
-    }
+    },
+    chunkSizeWarningLimit: 500, // Warn if chunks exceed 500KB
   },
   server: {
     proxy: {

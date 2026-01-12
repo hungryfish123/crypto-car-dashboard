@@ -130,7 +130,7 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor }) => {
+const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { claimRewards, loading: claiming } = useClaimRewards();
     const { playSuccess } = useAudio();
@@ -148,7 +148,8 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
     };
 
     const handleClaim = async () => {
-        if (claiming || pendingRewards <= 0 || !user?.wallet?.address) return;
+        const totalClaimable = pendingRewards + claimableSol;
+        if (claiming || totalClaimable <= 0 || !user?.wallet?.address) return;
 
         const result = await claimRewards(user.wallet.address);
 
@@ -228,54 +229,47 @@ const SolanaPanel = ({ earnings = 0, pendingRewards = 0, hourlyEarnings = 0, onR
                         Rewards
                     </h3>
 
-                    {/* Reward Stats */}
-                    <div className="space-y-3">
+                    {/* Rewards Display */}
+                    {/* Rewards Display - Reverted */}
+                    <div className="space-y-3 mb-4">
                         <div className="flex justify-between items-end">
                             <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hourly Yield</span>
-                            <span className="text-sm font-bold text-gray-400 font-mono">+{hourlyEarnings}</span>
+                            <span className="text-sm font-bold text-gray-400 font-mono">{hourlyEarnings.toFixed(5)} SOL</span>
                         </div>
                         <div className="flex justify-between items-end">
                             <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL Earned</span>
-                            <span className="text-sm font-bold text-gray-400 font-mono">{earnings.toFixed(3)} SOL</span>
+                            <span className="text-sm font-bold text-gray-400 font-mono">{lifetimeEarnings.toFixed(4)} SOL</span>
                         </div>
-                        {/* Lifetime Earnings from fee distribution */}
-                        {lifetimeEarnings > 0 && (
-                            <div className="flex justify-between items-end">
-                                <span className="text-xs text-green-400 tracking-widest font-bold uppercase flex items-center gap-1" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                    <Award size={12} /> Lifetime Fees
-                                </span>
-                                <span className="text-sm font-bold text-green-400 font-mono">{lifetimeEarnings.toFixed(4)} SOL</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Centered Claimable Amount - Combined from props + database */}
-                    <div className="flex flex-col items-center mt-6">
-                        {/* Show claimable fees from database if any */}
-                        {claimableSol > 0 && (
-                            <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1 font-bold">
-                                + {claimableSol.toFixed(4)} SOL from Fees
-                            </div>
-                        )}
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-4xl font-bold text-white font-mono">
-                                {(pendingRewards + claimableSol).toFixed(3)}
-                            </span>
-                            <span className="text-sm text-gray-400 font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL</span>
-                        </div>
-                        <button
-                            onClick={handleClaim}
-                            disabled={(pendingRewards + claimableSol) <= 0 || claiming}
-                            className={`w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors
-                                ${(pendingRewards + claimableSol) > 0
-                                    ? 'bg-red-600 hover:bg-red-500 text-white'
-                                    : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
-                            style={{ fontFamily: 'Orbitron, sans-serif' }}
-                        >
-                            {claiming ? 'Processing...' : 'Claim'}
-                        </button>
                     </div>
                 </div>
+
+                {/* Centered Claimable Amount - Combined from props + database */}
+                <div className="flex flex-col items-center mt-6">
+                    {/* Show claimable fees from database if any */}
+                    {claimableSol > 0 && (
+                        <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1 font-bold">
+                            + {claimableSol.toFixed(4)} SOL from Fees
+                        </div>
+                    )}
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold text-white font-mono">
+                            {(pendingRewards + claimableSol).toFixed(3)}
+                        </span>
+                        <span className="text-sm text-gray-400 font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL</span>
+                    </div>
+                    <button
+                        onClick={handleClaim}
+                        disabled={(pendingRewards + claimableSol) <= 0 || claiming}
+                        className={`w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors
+                                ${(pendingRewards + claimableSol) > 0
+                                ? 'bg-red-600 hover:bg-red-500 text-white'
+                                : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                        style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    >
+                        {claiming ? 'Processing...' : 'Claim'}
+                    </button>
+                </div>
+
 
                 {/* divider */}
                 <div className="h-px w-full bg-white/5"></div>

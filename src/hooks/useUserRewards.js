@@ -28,9 +28,9 @@ export function useUserRewards(walletAddress) {
 
         try {
             const { data, error: fetchError } = await supabase
-                .from('user_rewards')
-                .select('claimable_sol, lifetime_earnings, last_claim_at')
-                .eq('user_wallet', walletAddress)
+                .from('player_data')
+                .select('pending_rewards, total_sol_earned, last_claim_at')
+                .eq('wallet_id', walletAddress)
                 .single();
 
             if (fetchError) {
@@ -43,8 +43,8 @@ export function useUserRewards(walletAddress) {
                     throw fetchError;
                 }
             } else if (data) {
-                setClaimableSol(parseFloat(data.claimable_sol) || 0);
-                setLifetimeEarnings(parseFloat(data.lifetime_earnings) || 0);
+                setClaimableSol(parseFloat(data.pending_rewards) || 0);
+                setLifetimeEarnings(parseFloat(data.total_sol_earned) || 0);
                 setLastClaimAt(data.last_claim_at ? new Date(data.last_claim_at) : null);
             }
         } catch (err) {
@@ -71,14 +71,14 @@ export function useUserRewards(walletAddress) {
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'user_rewards',
-                    filter: `user_wallet=eq.${walletAddress}`,
+                    table: 'player_data',
+                    filter: `wallet_id=eq.${walletAddress}`,
                 },
                 (payload) => {
                     console.log('[useUserRewards] Real-time update:', payload);
                     if (payload.new) {
-                        setClaimableSol(parseFloat(payload.new.claimable_sol) || 0);
-                        setLifetimeEarnings(parseFloat(payload.new.lifetime_earnings) || 0);
+                        setClaimableSol(parseFloat(payload.new.pending_rewards) || 0);
+                        setLifetimeEarnings(parseFloat(payload.new.total_sol_earned) || 0);
                         setLastClaimAt(payload.new.last_claim_at ? new Date(payload.new.last_claim_at) : null);
                     }
                 }
