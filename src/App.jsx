@@ -38,8 +38,8 @@ import { supabase } from './supabaseClient';
 import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
 
 
-// Preload the models
-// Preloading removed for performance. Models load on demand.
+// Preload the default car model early for faster LCP
+useGLTF.preload('/bmw_m3_coupe_e30_1986.glb', '/draco-gltf/');
 
 
 function IntroCamera() {
@@ -185,7 +185,7 @@ function DynamicGrid({ carColor, specialEffect, ...props }) {
 }
 
 const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage, isTransitioning = false, modelPath = '/bmw_m3_coupe_e30_1986.glb', isOwned = true, targetNames = [], autoScale = false, transitionDirection = 1, equippedParts = {}, inventory = [], carModelId = 'bmw_m3_e30', specialEffect = null, unequipItem }) => {
-  const { scene } = useGLTF(modelPath);
+  const { scene } = useGLTF(modelPath, '/draco-gltf/');
   const meshRef = useRef();
   const transformGroupRef = useRef();
   const prevIsOwned = useRef(isOwned);
@@ -1604,7 +1604,12 @@ function App() {
         <div
           className={`absolute inset-0 z-0 overflow-hidden ${draggedItem ? 'cursor-copy' : ''}`}
         >
-          <Canvas className="w-full h-full" shadows>
+          <Canvas
+            className="w-full h-full"
+            shadows
+            frameloop="demand" // Only render when state changes - saves CPU/battery
+            dpr={[1, 1.5]} // Limit pixel ratio for performance
+          >
             {/* Fog for depth */}
             <fog attach="fog" args={['#101010', 10, 50]} />
 
