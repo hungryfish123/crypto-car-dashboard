@@ -382,7 +382,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
           if (material instanceof THREE.MeshStandardMaterial || material instanceof THREE.MeshPhysicalMaterial) {
             // Only apply standard color if NO special effect is active, or if this call is restoring state
             if (!specialEffect) {
-              material.color.set(color);
+              if (material.color) material.color.set(color);
 
               // FIX: Disable texture map if present, as it likely contains a baked color that interferes with tinting
               if (material.map) {
@@ -391,8 +391,10 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
               }
 
               // CRITICAL: Force emissive OFF to prevent glow effect on bright colors
-              material.emissive.set('#000000');
-              material.emissiveIntensity = 0;
+              if (material.emissive) {
+                material.emissive.set('#000000');
+                material.emissiveIntensity = 0;
+              }
             }
 
             // Clamp environment map intensity to prevent over-brightening
@@ -420,7 +422,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
     // Reset any lingering flash effects when style is reapplied
     scene.traverse((child) => {
-      if (child.isMesh && child.userData.originalEmissive) {
+      if (child.isMesh && child.userData.originalEmissive && child.material && child.material.emissive) {
         child.material.emissive.copy(child.userData.originalEmissive);
         child.material.emissiveIntensity = child.userData.originalEmissiveIntensity;
       }
@@ -437,7 +439,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
       // 1. FLASH ON: Set all materials to white glow
       scene.traverse((child) => {
-        if (child.isMesh && child.material) {
+        if (child.isMesh && child.material && child.material.emissive) {
           child.material.emissive.setHex(0xffffff);
           child.material.emissiveIntensity = 2.0;
         }
@@ -446,7 +448,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
       // 2. FLASH OFF: Revert after 150ms and reapply car style
       const timer = setTimeout(() => {
         scene.traverse((child) => {
-          if (child.isMesh && child.material) {
+          if (child.isMesh && child.material && child.material.emissive) {
             // Reset emissive to black (no glow)
             child.material.emissive.setHex(0x000000);
             child.material.emissiveIntensity = 0;
@@ -514,9 +516,11 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
             // Rainbow Rush
             if (specialEffect === 'rainbow') {
               const hue = (time * 0.5) % 1; // Cycle hue every 2 seconds
-              child.material.color.setHSL(hue, 1, 0.5);
-              child.material.emissive.setHSL(hue, 1, 0.2); // Slight emissive for pop
-              child.material.emissiveIntensity = 0.5;
+              if (child.material.color) child.material.color.setHSL(hue, 1, 0.5);
+              if (child.material.emissive) {
+                child.material.emissive.setHSL(hue, 1, 0.2); // Slight emissive for pop
+                child.material.emissiveIntensity = 0.5;
+              }
             }
           }
         });
@@ -562,11 +566,11 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
         // Apply heat to silhouette
         scene.traverse(child => {
-          if (child.isMesh && child.material) {
+          if (child.isMesh && child.material && child.material.emissive) {
             child.material.emissive.setHex(0xffffff);
             child.material.emissiveIntensity = glowIntensity.current;
             // Also make it fully opaque
-            if (child.material.opacity) child.material.opacity = 1;
+            if (child.material.opacity !== undefined) child.material.opacity = 1;
           }
         });
 
@@ -581,7 +585,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
           // FORCE overwrite emissive immediately to prevent 1-frame dark flicker
           scene.traverse(child => {
-            if (child.isMesh && child.material) {
+            if (child.isMesh && child.material && child.material.emissive) {
               child.material.emissive.setHex(0xffffff);
               child.material.emissiveIntensity = glowIntensity.current;
             }
@@ -596,7 +600,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
         // Apply glow to restored materials
         scene.traverse(child => {
-          if (child.isMesh && child.material) {
+          if (child.isMesh && child.material && child.material.emissive) {
             child.material.emissive.setHex(0xffffff);
             child.material.emissiveIntensity = glowIntensity.current;
           }
@@ -608,7 +612,7 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
           glowIntensity.current = 0;
           // Final cleanup to ensure no lingering glow
           scene.traverse(child => {
-            if (child.isMesh && child.material) {
+            if (child.isMesh && child.material && child.material.emissive) {
               child.material.emissiveIntensity = 0;
               child.material.emissive.setHex(0x000000);
             }
@@ -687,6 +691,9 @@ function App() {
 
   // Global Theme Utility - Apply saved theme on load
   const applyGlobalThemeFromColor = (color) => {
+    // Safety check - skip if color is null/undefined
+    if (!color || typeof color !== 'string') return;
+
     let themeColor = color;
     if (color.toLowerCase() === '#000000') themeColor = '#9ca3af';
     if (color.toLowerCase() === '#ffffff') themeColor = '#ffffff';
@@ -1006,12 +1013,26 @@ function App() {
   }, []); // Run once on mount
 
   // Derived state for current car's equipped parts
-  const equippedParts = equippedPartsByCar[currentCarModel.id] || {
+  // Derived state for current car's equipped parts
+  // FILTERED by actual inventory ownership to prevent stale items appearing
+  const equippedPartsRaw = equippedPartsByCar[currentCarModel.id] || {};
+
+  const equippedParts = {
     Engines: null,
     Turbos: null,
     Suspensions: null,
     Wheels: null,
     Special: null,
+    ...Object.keys(equippedPartsRaw).reduce((acc, key) => {
+      const item = equippedPartsRaw[key];
+      // VALIDATION: Only show if it still exists in user's inventory
+      if (item && inventory.some(i => i.id === item.id)) {
+        acc[key] = item;
+      } else {
+        acc[key] = null;
+      }
+      return acc;
+    }, {})
   };
 
   // Flash Effect State - Use counter to trigger unique flashes
@@ -1668,8 +1689,8 @@ function App() {
               <CustomFloor />
             )}
 
-            {/* Post Processing */}
-            <EffectComposer disableNormalPass>
+            {/* Post Processing - multisampling={0} fixes alpha error */}
+            <EffectComposer disableNormalPass multisampling={0}>
               <Bloom luminanceThreshold={1.5} intensity={0.3} mipmapBlur />
             </EffectComposer>
 
@@ -1688,7 +1709,7 @@ function App() {
             carColor={carColor}
             setActivePage={setActivePage}
             inventory={inventory}
-            equippedParts={equippedPartsByCar[currentCarModel.id] || { Engines: null, Turbos: null, Suspensions: null, Wheels: null, Special: null }}
+            equippedParts={equippedParts}
             allEquippedParts={equippedPartsByCar}
             equipItem={equipItem}
             unequipItem={unequipItem}

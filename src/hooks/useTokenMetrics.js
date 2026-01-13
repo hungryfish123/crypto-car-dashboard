@@ -2,9 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const POLL_INTERVAL = 20000; // 20 seconds
+const EDGE_FUNCTION_URL = 'https://ssxsjafkzuqikmobhihl.supabase.co/functions/v1/get-token-metrics';
 
 /**
- * Hook to fetch token metrics directly from Moralis for all items in item_mappings
+ * Hook to fetch token metrics via Edge Function
+ * Edge Function handles caching - all users share the same cached data
  */
 export const useTokenMetrics = () => {
     const [data, setData] = useState({});
@@ -12,83 +14,39 @@ export const useTokenMetrics = () => {
     const [error, setError] = useState(null);
 
     const fetchMetrics = useCallback(async () => {
-        if (!isSupabaseConfigured || !supabase) {
+        if (!isSupabaseConfigured) {
             console.warn('[useTokenMetrics] Supabase not configured');
             setLoading(false);
             return;
         }
 
-        const moralisApiKey = import.meta.env.VITE_MORALIS_API_KEY;
-        if (!moralisApiKey) {
-            console.error('[useTokenMetrics] VITE_MORALIS_API_KEY not set');
-            setLoading(false);
-            setError('API key not configured');
-            return;
-        }
-
         try {
-            console.log('[useTokenMetrics] Fetching item mappings...');
+            console.log('[useTokenMetrics] Calling Edge Function...');
 
-            // Get all CAs from item_mappings
-            const { data: mappings, error: dbError } = await supabase
-                .from('item_mappings')
-                .select('item_id, contract_address')
-                .not('contract_address', 'is', null);
-
-            if (dbError) {
-                console.error('[useTokenMetrics] DB error:', dbError);
-                setError(dbError.message);
-                setLoading(false);
-                return;
-            }
-
-            if (!mappings || mappings.length === 0) {
-                console.log('[useTokenMetrics] No CAs configured in item_mappings');
-                setData({});
-                setLoading(false);
-                return;
-            }
-
-            console.log('[useTokenMetrics] Found', mappings.length, 'items with CAs');
-
-            const tokenMetrics = {};
-
-            // Fetch data for each CA
-            for (const mapping of mappings) {
-                const ca = mapping.contract_address;
-                if (!ca) continue;
-
-                try {
-                    console.log(`[useTokenMetrics] Fetching ${mapping.item_id}: ${ca}`);
-
-                    const response = await fetch(
-                        `https://solana-gateway.moralis.io/token/mainnet/${ca}/price`,
-                        { headers: { 'X-API-Key': moralisApiKey } }
-                    );
-
-                    if (response.ok) {
-                        const priceData = await response.json();
-                        console.log(`[useTokenMetrics] ${mapping.item_id} response:`, priceData);
-
-                        tokenMetrics[mapping.item_id] = {
-                            ca,
-                            price: parseFloat(priceData.usdPrice) || 0,
-                            marketCap: priceData.marketCap || 0,
-                            holderCount: 0,
-                            symbol: priceData.tokenSymbol || 'UNK',
-                            name: priceData.tokenName || 'Unknown'
-                        };
-                    } else {
-                        console.warn(`[useTokenMetrics] ${mapping.item_id} failed: ${response.status}`);
-                    }
-                } catch (err) {
-                    console.error(`[useTokenMetrics] Error for ${mapping.item_id}:`, err);
+            // Call the Edge Function - it handles caching internally
+            const response = await fetch(EDGE_FUNCTION_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNzeHNqYWZrenVxaWttb2JoaWhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ4MTQ5NDgsImV4cCI6MjA1MDM5MDk0OH0.A5lP0BLGkFq9DAfkTWAqzGNOcNw8UFpbJV2fi-5-rF4'}`
                 }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Edge Function returned ${response.status}`);
             }
 
-            console.log('[useTokenMetrics] Final metrics:', tokenMetrics);
-            setData(tokenMetrics);
-            setError(null);
+            const result = await response.json();
+            console.log('[useTokenMetrics] Response:', result);
+
+            if (result.success && result.data) {
+                setData(result.data);
+                setError(null);
+                console.log(`[useTokenMetrics] Loaded ${Object.keys(result.data).length} items`);
+            } else {
+                console.warn('[useTokenMetrics] No data in response');
+                setData({});
+            }
 
         } catch (err) {
             console.error('[useTokenMetrics] Fetch failed:', err);
@@ -99,12 +57,21 @@ export const useTokenMetrics = () => {
     }, []);
 
     useEffect(() => {
+        // Initial fetch
         fetchMetrics();
+
+        // Poll every 20 seconds
         const interval = setInterval(fetchMetrics, POLL_INTERVAL);
+
         return () => clearInterval(interval);
     }, [fetchMetrics]);
 
-    return { data, loading, error, refetch: fetchMetrics };
+    return {
+        data,
+        loading,
+        error,
+        refetch: fetchMetrics
+    };
 };
 
 export default useTokenMetrics;

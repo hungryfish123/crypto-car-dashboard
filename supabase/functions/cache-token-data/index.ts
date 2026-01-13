@@ -1,133 +1,156 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// Supabase Edge Function: cache-token-data
+// Batch fetches ALL token prices from Moralis and updates token_cache table
+// Designed to be called by a cron job every 20 seconds
+// All clients read from token_cache instead of calling Moralis directly
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+Deno.serve(async (req: Request) => {
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    }
 
-// Main token CA - this is the "GEAR" token shown on the main page chart
-// This is also stored in item_mappings for the first item and can be overridden there
-const DEFAULT_TOKEN_ADDRESS = "FgxMYCKfAGw4eNq9fpxHoxjCpnzJZaqyLbnTRQaXpump";
-const CACHE_TTL_SECONDS = 20;
-
-serve(async (req) => {
+    // Handle CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
+    const startTime = Date.now()
+    console.log('[CacheTokenData] Starting batch update...')
+
     try {
+        // Initialize clients
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!
         const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-        const moralisApiKey = Deno.env.get('MORALIS_API_KEY')
-        const supabase = createClient(supabaseUrl, supabaseKey)
+        const moralisKey = Deno.env.get('MORALIS_API_KEY')!
 
-        // Try to get the main token CA from item_mappings (first item with a CA)
-        // This allows the CA to be updated via Admin Panel
-        let tokenAddress = DEFAULT_TOKEN_ADDRESS
-        const { data: mappings } = await supabase
-            .from('item_mappings')
-            .select('contract_address')
-            .not('contract_address', 'is', null)
-            .limit(1)
-
-        if (mappings && mappings.length > 0 && mappings[0].contract_address) {
-            tokenAddress = mappings[0].contract_address
-            console.log(`Using CA from item_mappings: ${tokenAddress}`)
-        } else {
-            console.log(`Using default CA: ${tokenAddress}`)
+        if (!moralisKey) {
+            throw new Error('MORALIS_API_KEY not configured')
         }
 
-        // Check cache first
-        const { data: cached, error: cacheError } = await supabase
-            .from('token_cache')
-            .select('*')
-            .eq('id', 'main')
-            .single()
+        const supabase = createClient(supabaseUrl, supabaseKey)
 
-        if (cached && !cacheError) {
-            const cacheAge = (Date.now() - new Date(cached.updated_at).getTime()) / 1000
+        // Step 1: Get ALL items with contract addresses from item_mappings
+        const { data: mappings, error: dbError } = await supabase
+            .from('item_mappings')
+            .select('item_id, contract_address')
+            .not('contract_address', 'is', null)
 
-            // If cache is fresh (< 20 seconds), return it immediately
-            if (cacheAge < CACHE_TTL_SECONDS) {
-                console.log(`Cache hit (${cacheAge.toFixed(1)}s old)`)
-                return new Response(JSON.stringify({
-                    priceUsd: cached.price_usd,
-                    marketCap: cached.market_cap,
-                    priceChange24h: cached.price_change_24h,
-                    volume24h: cached.volume_24h,
-                    symbol: cached.symbol,
-                    name: cached.name,
-                    updatedAt: cached.updated_at,
-                    fromCache: true
-                }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+        if (dbError) {
+            throw new Error(`DB error: ${dbError.message}`)
+        }
+
+        if (!mappings || mappings.length === 0) {
+            console.log('[CacheTokenData] No items with CAs found in item_mappings')
+            return new Response(JSON.stringify({
+                success: true,
+                message: 'No tokens to cache',
+                itemsProcessed: 0
+            }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+        }
+
+        console.log(`[CacheTokenData] Found ${mappings.length} items to update`)
+
+        // Step 2: Fetch price data from Moralis for each item
+        const moralisHeaders = {
+            'X-API-Key': moralisKey,
+            'Accept': 'application/json'
+        }
+
+        const cacheRows: Array<{
+            item_id: string
+            contract_address: string
+            price_usd: number
+            market_cap: number
+            price_change_24h: number
+            symbol: string
+            name: string
+            updated_at: string
+        }> = []
+
+        const now = new Date().toISOString()
+
+        for (const mapping of mappings) {
+            const ca = mapping.contract_address
+            if (!ca || ca.length < 32) {
+                console.log(`[CacheTokenData] Skipping ${mapping.item_id}: Invalid CA`)
+                continue
+            }
+
+            try {
+                // Fetch price from Moralis
+                const priceRes = await fetch(
+                    `https://solana-gateway.moralis.io/token/mainnet/${ca}/price`,
+                    { headers: moralisHeaders }
+                )
+
+                if (!priceRes.ok) {
+                    console.log(`[CacheTokenData] ${mapping.item_id}: Moralis returned ${priceRes.status}`)
+                    continue
+                }
+
+                const priceData = await priceRes.json()
+                const price = parseFloat(priceData.usdPrice) || 0
+                const priceChange = parseFloat(priceData.usdPricePercentChange24h) || 0
+
+                // Calculate market cap (pump.fun tokens have 1B supply)
+                const marketCap = price * 1_000_000_000
+
+                cacheRows.push({
+                    item_id: mapping.item_id,
+                    contract_address: ca,
+                    price_usd: price,
+                    market_cap: marketCap,
+                    price_change_24h: priceChange,
+                    symbol: priceData.tokenSymbol || 'UNK',
+                    name: priceData.tokenName || 'Unknown',
+                    updated_at: now
+                })
+
+                console.log(`[CacheTokenData] ${mapping.item_id}: $${price.toFixed(8)} (${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)`)
+
+            } catch (err) {
+                console.error(`[CacheTokenData] Error fetching ${mapping.item_id}:`, err)
             }
         }
 
-        // Cache is stale or missing - fetch fresh data from Moralis
-        console.log('Fetching fresh data from Moralis...')
+        // Step 3: Batch upsert all rows into token_cache
+        if (cacheRows.length > 0) {
+            const { error: upsertError } = await supabase
+                .from('token_cache')
+                .upsert(cacheRows, { onConflict: 'item_id' })
 
-        if (!moralisApiKey) {
-            throw new Error('MORALIS_API_KEY secret not set')
+            if (upsertError) {
+                throw new Error(`Upsert error: ${upsertError.message}`)
+            }
+
+            console.log(`[CacheTokenData] Upserted ${cacheRows.length} rows to token_cache`)
         }
 
-        const moralisResponse = await fetch(
-            `https://solana-gateway.moralis.io/token/mainnet/${tokenAddress}/price`,
-            { headers: { 'X-API-Key': moralisApiKey } }
-        )
-
-        if (!moralisResponse.ok) {
-            const errorText = await moralisResponse.text()
-            console.error(`Moralis API error: ${moralisResponse.status} - ${errorText}`)
-            throw new Error(`Moralis API error: ${moralisResponse.status}`)
-        }
-
-        const moralisData = await moralisResponse.json()
-        console.log('Moralis response:', JSON.stringify(moralisData))
-
-        const tokenData = {
-            price_usd: parseFloat(moralisData.usdPrice) || 0,
-            market_cap: moralisData.marketCap || 0,
-            price_change_24h: moralisData.usdPrice24hrPercentChange || 0,
-            volume_24h: 0,
-            symbol: moralisData.tokenSymbol || 'GEAR',
-            name: moralisData.tokenName || 'Gear Token',
-            updated_at: new Date().toISOString()
-        }
-
-        console.log('Parsed token data:', JSON.stringify(tokenData))
-
-        // Update cache
-        const { error: updateError } = await supabase
-            .from('token_cache')
-            .upsert({
-                id: 'main',
-                contract_address: tokenAddress,
-                ...tokenData
-            })
-
-        if (updateError) {
-            console.error('Cache update failed:', updateError)
-        } else {
-            console.log('Cache updated successfully')
-        }
+        const elapsed = Date.now() - startTime
+        console.log(`[CacheTokenData] Completed in ${elapsed}ms`)
 
         return new Response(JSON.stringify({
-            priceUsd: tokenData.price_usd,
-            marketCap: tokenData.market_cap,
-            priceChange24h: tokenData.price_change_24h,
-            volume24h: tokenData.volume_24h,
-            symbol: tokenData.symbol,
-            name: tokenData.name,
-            updatedAt: tokenData.updated_at,
-            fromCache: false
-        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+            success: true,
+            itemsProcessed: cacheRows.length,
+            totalItems: mappings.length,
+            elapsedMs: elapsed
+        }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
 
-    } catch (error) {
-        console.error('Error:', error.message)
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-        )
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'Unknown error'
+        console.error('[CacheTokenData] Fatal error:', message)
+        return new Response(JSON.stringify({
+            success: false,
+            error: message
+        }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
     }
 })

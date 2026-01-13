@@ -34,7 +34,9 @@ function BMWModel({ color }) {
                 const matName = child.material.name?.toLowerCase() || '';
                 const meshName = child.name?.toLowerCase() || '';
                 if (matName.includes('paint') || matName.includes('body') || meshName.includes('body') || meshName.includes('paint')) {
-                    child.material.color.set(color);
+                    if (child.material.color) {
+                        child.material.color.set(color);
+                    }
                     child.material.roughness = 0.2;
                     child.material.metalness = 0.6;
                 }
