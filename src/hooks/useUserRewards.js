@@ -29,7 +29,7 @@ export function useUserRewards(walletAddress) {
         try {
             const { data, error: fetchError } = await supabase
                 .from('player_data')
-                .select('pending_rewards, total_sol_earned, last_claim_at')
+                .select('total_earned, last_claim_at')
                 .eq('wallet_id', walletAddress)
                 .single();
 
@@ -40,8 +40,8 @@ export function useUserRewards(walletAddress) {
                 setLifetimeEarnings(0);
                 setLastClaimAt(null);
             } else if (data) {
-                setClaimableSol(parseFloat(data.pending_rewards) || 0);
-                setLifetimeEarnings(parseFloat(data.total_sol_earned) || 0);
+                setClaimableSol(0); // Not used anymore - rewards calculated client-side
+                setLifetimeEarnings(parseFloat(data.total_earned) || 0);
                 setLastClaimAt(data.last_claim_at ? new Date(data.last_claim_at) : null);
             }
         } catch (err) {
@@ -74,8 +74,8 @@ export function useUserRewards(walletAddress) {
                 (payload) => {
                     console.log('[useUserRewards] Real-time update:', payload);
                     if (payload.new) {
-                        setClaimableSol(parseFloat(payload.new.pending_rewards) || 0);
-                        setLifetimeEarnings(parseFloat(payload.new.total_sol_earned) || 0);
+                        setClaimableSol(0); // Not used anymore
+                        setLifetimeEarnings(parseFloat(payload.new.total_earned) || 0);
                         setLastClaimAt(payload.new.last_claim_at ? new Date(payload.new.last_claim_at) : null);
                     }
                 }

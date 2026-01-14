@@ -1,6 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Link2 } from 'lucide-react';
+import { X, Download, Link2, ExternalLink } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 /**
@@ -50,6 +50,7 @@ const PnLCard = ({
     onClose,
     username = "PLAYER",
     claimedAmount = 0.000,
+    txSignature = null,
     referralCode = "PLAYER",
     carColor = "#dc2626"
 }) => {
@@ -126,6 +127,14 @@ const PnLCard = ({
         const text = encodeURIComponent(`I just claimed ${claimedAmount.toFixed(3)} SOL on @geardotfun\n\nJoin with my referral code: ${referralCode}`);
         const url = encodeURIComponent(referralLink);
         window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+    };
+
+    const handleOpenSolscan = () => {
+        if (txSignature) {
+            window.open(`https://solscan.io/tx/${txSignature}`, '_blank');
+        } else {
+            alert('Transaction hash unavailable');
+        }
     };
 
     if (!isOpen) return null;
@@ -230,6 +239,22 @@ const PnLCard = ({
                                 </svg>
                                 Share
                             </button>
+
+                            {txSignature && (
+                                <button
+                                    onClick={handleOpenSolscan}
+                                    className="flex items-center gap-2 px-5 py-3 rounded-lg text-white font-bold transition-opacity hover:opacity-80"
+                                    style={{
+                                        backgroundColor: '#1C1C1C', // Dark grey for Solscan
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        fontFamily: 'Orbitron, sans-serif',
+                                        backgroundImage: 'none'
+                                    }}
+                                >
+                                    <ExternalLink size={18} />
+                                    SolScan
+                                </button>
+                            )}
                         </div>
                     </motion.div>
 

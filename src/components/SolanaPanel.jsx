@@ -1,13 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Wallet, Activity, Gauge, Zap, Weight, Award } from 'lucide-react';
 import { useSolanaToken } from '../hooks/useSolanaToken';
-import { useClaimRewards } from '../hooks/useClaimRewards';
-import { useUserRewards } from '../hooks/useUserRewards';
+import { useRewards } from '../hooks/useRewards';  // New hook
+import { useUserRewards } from '../hooks/useUserRewards'; // Keeping for claimableSol (fees)
 import { useAudio } from '../hooks/useAudio';
 import { usePrivy } from '@privy-io/react-auth';
 import confetti from 'canvas-confetti';
 import PnLCard from './PnLCard';
+import ClaimPopup from './ClaimPopup'; // New popup component
+import { supabase } from '../supabaseClient';
+
+// Constants for yield weights (must match DB/marketplaceItems.js)
+const YIELD_WEIGHTS = {
+    // Engines
+    'eng_lv1': 1, 'eng_lv2': 2, 'eng_lv3': 4, 'eng_lv4': 8, 'eng_lv5': 16,
+    // Turbos
+    'turbo_lv1': 1, 'turbo_lv2': 2, 'turbo_lv3': 4, 'turbo_lv4': 8, 'turbo_lv5': 16,
+    // Suspensions
+    'susp_lv1': 1, 'susp_lv2': 2, 'susp_lv3': 4, 'susp_lv4': 8, 'susp_lv5': 16,
+    'sus_lv1': 1, 'sus_lv2': 2, 'sus_lv3': 4, 'sus_lv4': 8, 'sus_lv5': 16, // Old mapping
+    // Wheels
+    'wheel_lv1': 1, 'wheel_lv2': 2, 'wheel_lv3': 4, 'wheel_lv4': 8, 'wheel_lv5': 16,
+    'wheels_lv1': 1, 'wheels_lv2': 2, 'wheels_lv3': 4, 'wheels_lv4': 8, 'wheels_lv5': 16, // Old mapping
+    // Special
+    'special_seat': 33, 'special_brakes': 33, 'special_nitro': 33,
+    'special_rainbow': 33, // Backward compatibility
+    // Cars
+    'vw_golf_gti_mk2': 20, 'audi_sport_quattro': 20,
+    'mazda_mx5_na': 20, 'ferrari_f40': 20, 'lamborghini_huracan_2015': 20
+};
 
 const SimpleLineChart = ({ data, isPositive, color }) => {
     if (!data || !data.points || data.points.length < 2) return null;
@@ -131,18 +153,29 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor, username = '' }) => {
+const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, carColor, username = '' }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
-    const { claimRewards, loading: claiming } = useClaimRewards();
     const { playSuccess } = useAudio();
     const { user } = usePrivy();
 
     // P&L Card Modal State
     const [showPnLCard, setShowPnLCard] = useState(false);
-    const [lastClaimedAmount, setLastClaimedAmount] = useState(0);
+    const [claimData, setClaimData] = useState({ amount: 0, txSignature: null });
 
-    // Fetch user rewards from database (claimable fees + lifetime earnings)
-    const { claimableSol, lifetimeEarnings, onClaimSuccess } = useUserRewards(user?.wallet?.address);
+    // Use legacy fees claim hook as backup/additive
+    const { claimableSol: feesSol } = useUserRewards(user?.wallet?.address);
+
+    // New Real-time Rewards Hook
+    const {
+        pendingRewards, // Live calculated rewards
+        hourlyRate,
+        totalEarned,
+        claimRewards,
+        isLoading: claiming,
+        claimSuccess,
+        claimError,
+        clearClaimStatus
+    } = useRewards(user?.wallet?.address, equippedParts, YIELD_WEIGHTS);
 
     const formatLargeNumber = (num) => {
         if (!num) return '$0';
@@ -153,50 +186,51 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
     };
 
     const handleClaim = async () => {
-        const totalClaimable = pendingRewards + claimableSol;
+        if (claiming || (!pendingRewards && !feesSol)) return;
 
-        // For testing: always allow click to preview P&L card
-        // TODO: Re-enable this check after testing
-        // if (claiming || totalClaimable <= 0 || !user?.wallet?.address) return;
-        if (claiming) return;
+        // Process claim
+        const result = await claimRewards();
 
-        // If there's something to claim, process it
-        if (totalClaimable > 0 && user?.wallet?.address) {
-            const result = await claimRewards(user.wallet.address);
-            if (result.success) {
-                playSuccess();
-                confetti({
-                    particleCount: 150,
-                    spread: 100,
-                    origin: { x: 0.1, y: 0.5 },
-                    colors: ['#FFD700', '#FFA500', '#FFFFFF']
-                });
-                if (onRewardsClaimed) onRewardsClaimed();
-            }
+        if (result.success) {
+            playSuccess();
+            confetti({
+                particleCount: 150,
+                spread: 100,
+                origin: { x: 0.1, y: 0.5 },
+                colors: ['#FFD700', '#FFA500', '#FFFFFF']
+            });
+
+            if (onRewardsClaimed) onRewardsClaimed();
+
+            // Show P&L Card with success data
+            setClaimData({
+                amount: result.amount,
+                txSignature: result.txSignature
+            });
+            setShowPnLCard(true);
         }
-
-        // Always show P&L Card (use mock amount if nothing claimed)
-        setLastClaimedAmount(totalClaimable > 0 ? totalClaimable : 0.123);
-        setShowPnLCard(true);
     };
 
     // Calculate stat bonuses from equipped parts
-    // Level 1: +5%, Level 2: +10%, Level 3: +15%, etc. (level × 5%)
-    // Special items: +50% all stats except weight
     const calculateStatBonus = () => {
         let totalBonus = 0;
         let specialBonus = 0;
 
-        Object.values(equippedParts).forEach(part => {
+        // Handle both prop format and internal state format
+        const partsIter = Object.values(equippedParts).flatMap(val => {
+            // If val is the car object (e.g. { Engines: ... }), retrieve its values
+            if (val && typeof val === 'object' && !val.id) return Object.values(val);
+            return val;
+        });
+
+        partsIter.forEach(part => {
             if (!part) return;
 
             const level = part.rarityLevel || 1;
 
             if (part.category === 'Special') {
-                // Special items give 50% boost
                 specialBonus += 50;
             } else {
-                // Regular items give level × 5% boost
                 totalBonus += level * 5;
             }
         });
@@ -214,7 +248,7 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
         acceleration: 7
     };
 
-    // Apply bonuses to stats (weight not affected by special bonus)
+    // Apply bonuses to stats
     const applyBonus = (value, includeSpecial = true) => {
         const numVal = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
         const bonusMultiplier = includeSpecial ? (100 + totalBonus) / 100 : (100 + regularBonus) / 100;
@@ -225,8 +259,11 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
         power: applyBonus(baseStats.power) + ' HP',
         topSpeed: applyBonus(baseStats.topSpeed) + ' km/h',
         acceleration: (parseFloat(String(baseStats.acceleration).replace(/[^0-9.]/g, '')) / ((100 + totalBonus) / 100)).toFixed(1) + 's',
-        weight: baseStats.weight // Weight stays the same for special items
+        weight: baseStats.weight
     };
+
+    // Total displayable Rewards (Live + any cached fees)
+    const totalDisplayRewards = pendingRewards;
 
     return (
         <>
@@ -245,38 +282,35 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
                             Rewards
                         </h3>
 
-                        {/* Rewards Display */}
-                        {/* Rewards Display - Reverted */}
                         <div className="space-y-3 mb-4">
                             <div className="flex justify-between items-end">
-                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hourly Yield</span>
-                                <span className="text-sm font-bold text-gray-400 font-mono">{hourlyEarnings.toFixed(5)} SOL</span>
+                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hourly Income</span>
+                                <span className="text-sm font-bold text-gray-400 font-mono">{hourlyRate.toFixed(5)} SOL</span>
                             </div>
                             <div className="flex justify-between items-end">
-                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL Earned</span>
-                                <span className="text-sm font-bold text-gray-400 font-mono">{lifetimeEarnings.toFixed(4)} SOL</span>
+                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Total Earned</span>
+                                <span className="text-sm font-bold text-gray-400 font-mono">{totalEarned.toFixed(4)} SOL</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Centered Claimable Amount - Combined from props + database */}
+                    {/* Centered Claimable Amount */}
                     <div className="flex flex-col items-center mt-6">
-                        {/* Show claimable fees from database if any */}
-                        {claimableSol > 0 && (
+                        {feesSol > 0 && (
                             <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1 font-bold">
-                                + {claimableSol.toFixed(4)} SOL from Fees
+                                + {feesSol.toFixed(4)} Fees
                             </div>
                         )}
                         <div className="flex items-baseline gap-2">
                             <span className="text-4xl font-bold text-white font-mono">
-                                {(pendingRewards + claimableSol).toFixed(3)}
+                                {totalDisplayRewards.toFixed(6)}
                             </span>
                             <span className="text-sm text-gray-400 font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL</span>
                         </div>
                         <button
                             onClick={handleClaim}
                             disabled={claiming}
-                            className="w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors bg-red-600 hover:bg-red-500 text-white"
+                            className="w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors bg-red-600 hover:bg-red-500 text-white disabled:bg-gray-700 disabled:cursor-not-allowed"
                             style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                             {claiming ? 'Processing...' : 'Claim'}
@@ -332,9 +366,18 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
                 isOpen={showPnLCard}
                 onClose={() => setShowPnLCard(false)}
                 username={username || 'PLAYER'}
-                claimedAmount={lastClaimedAmount}
+                claimedAmount={claimData.amount}
+                txSignature={claimData.txSignature}
                 referralCode={username || 'PLAYER'}
                 carColor={carColor}
+            />
+
+            {/* Toast Notifications */}
+            <ClaimPopup
+                isLoading={claiming}
+                success={claimSuccess}
+                error={claimError}
+                onClose={clearClaimStatus}
             />
         </>
     );

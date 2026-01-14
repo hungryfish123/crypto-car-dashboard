@@ -1,0 +1,6 @@
+# Supabase project configuration
+[project]
+project_id = "ssxsjafkzuqikmobhihl"
+
+[functions.payout-rewards]
+verify_jwt = false

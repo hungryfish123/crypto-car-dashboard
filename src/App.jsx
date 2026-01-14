@@ -1111,8 +1111,11 @@ function App() {
       // 2. Equip on current car
       const newCarParts = { ...(newState[currentCarId] || {}) };
 
-      // Assign to new key
-      newCarParts[equipKey] = item;
+      // Assign to new key WITH equipped_at timestamp for rewards tracking
+      newCarParts[equipKey] = {
+        ...item,
+        equipped_at: new Date().toISOString()
+      };
 
       // CLEANUP: If we are equipping a Special item to a sub-slot, ensure it's not also in 'Special'
       if (equipKey !== 'Special' && newCarParts['Special']?.id === item.id) {
