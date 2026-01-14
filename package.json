@@ -28,6 +28,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.26",
     "howler": "^2.2.4",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.561.0",
     "moralis": "^2.27.2",
     "react": "^19.2.0",

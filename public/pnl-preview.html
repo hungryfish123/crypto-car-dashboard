@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P&L Card Preview</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .pnl-card {
+            position: relative;
+            width: 1024px;
+            height: 725px;
+            overflow: hidden;
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .pnl-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .pnl-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 40px 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Username - Top Left */
+        .pnl-username {
+            font-size: 28px;
+            font-weight: 700;
+            font-style: italic;
+            color: #c41e3a;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(196, 30, 58, 0.5);
+        }
+
+        /* Claimed Section - Middle Left */
+        .pnl-claimed-section {
+            margin-top: auto;
+            margin-bottom: auto;
+        }
+
+        .pnl-claimed-label {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .pnl-claimed-amount {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .pnl-amount {
+            font-size: 56px;
+            font-weight: 900;
+            font-style: italic;
+            color: #c41e3a;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px rgba(196, 30, 58, 0.6);
+        }
+
+        .pnl-currency {
+            font-size: 24px;
+            font-weight: 700;
+            color: #888888;
+            text-transform: uppercase;
+        }
+
+        /* Referral Section - Bottom Left */
+        .pnl-referral-section {
+            margin-top: auto;
+        }
+
+        .pnl-referral-label {
+            font-size: 24px;
+            font-weight: 700;
+            font-style: italic;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .pnl-referral-code {
+            font-size: 28px;
+            font-weight: 700;
+            color: #c41e3a;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 5px;
+            text-shadow: 0 0 10px rgba(196, 30, 58, 0.5);
+        }
+
+        /* Info Panel */
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Rajdhani', sans-serif;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- P&L Card -->
+    <div class="pnl-card">
+        <!-- Background Image -->
+        <img src="pnl-background.jpg" alt="P&L Card Background" class="pnl-background">
+
+        <!-- Text Overlay (MOCK DATA) -->
+        <div class="pnl-overlay">
+            <!-- Username - Top Left -->
+            <div class="pnl-username">
+                SUSKO
+            </div>
+
+            <!-- Claimed Amount - Middle Left -->
+            <div class="pnl-claimed-section">
+                <div class="pnl-claimed-label">CLAIMED:</div>
+                <div class="pnl-claimed-amount">
+                    <span class="pnl-amount">1.234</span>
+                    <span class="pnl-currency">SOL</span>
+                </div>
+            </div>
+
+            <!-- Referral Code - Bottom Left -->
+            <div class="pnl-referral-section">
+                <div class="pnl-referral-label">SIGN UP WITH:</div>
+                <div class="pnl-referral-code">SUSKO</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        📸 P&L Card Preview — Using Mock Data: Username=SUSKO, Claimed=1.234 SOL
+    </div>
+</body>
+
+</html>

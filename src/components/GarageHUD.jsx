@@ -9,7 +9,7 @@ import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 import { useDynamicLinks } from '../hooks/useDynamicLinks';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem }) => {
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem, username = '' }) => {
     const { links } = useDynamicLinks();
     const { playHover } = useAudio();
 
@@ -94,6 +94,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                 currentCarModel={currentCarModel}
                 equippedParts={equippedParts}
                 carColor={carColor}
+                username={username}
             />
             <motion.div
                 initial={{ x: 400, opacity: 0 }}

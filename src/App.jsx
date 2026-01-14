@@ -1728,6 +1728,7 @@ function App() {
               setInitialSelectedItem(item);
               setActivePage('Marketplace');
             }}
+            username={username}
           />)}
 
         {/* Admin Panel Overlay */}
@@ -1887,11 +1888,10 @@ function App() {
             avatarUrl={avatarUrl}
             onAvatarUpdated={(url) => setAvatarUrl(url)}
             hourlyEarnings={
-              Object.values(equippedParts || {}).reduce((total, part) => {
-                if (!part) return total;
-                const yieldVal = parseFloat((part.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
-                return total + yieldVal;
-              }, 0).toFixed(4)
+              (inventory.reduce((total, item) => {
+                const yieldVal = parseFloat((item.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
+                return total + (yieldVal * (item.quantity || 1));
+              }, 0) * rewardRate).toFixed(5)
             }
             totalEarned={activePage === 'Profile' ? referralEarnings : 0}
             currentCarModel={currentCarModel}

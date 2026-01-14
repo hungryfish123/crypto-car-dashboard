@@ -9,6 +9,15 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    // Check for referral code in URL and pre-fill input
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const refCode = urlParams.get('ref');
+        if (refCode) {
+            setInputCode(refCode.toUpperCase());
+        }
+    }, []);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const normalizedInput = inputCode.toUpperCase().trim();

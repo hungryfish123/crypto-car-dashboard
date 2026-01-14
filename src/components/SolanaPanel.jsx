@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Wallet, Activity, Gauge, Zap, Weight, Award } from 'lucide-react';
 import { useSolanaToken } from '../hooks/useSolanaToken';
@@ -7,6 +7,7 @@ import { useUserRewards } from '../hooks/useUserRewards';
 import { useAudio } from '../hooks/useAudio';
 import { usePrivy } from '@privy-io/react-auth';
 import confetti from 'canvas-confetti';
+import PnLCard from './PnLCard';
 
 const SimpleLineChart = ({ data, isPositive, color }) => {
     if (!data || !data.points || data.points.length < 2) return null;
@@ -130,11 +131,15 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor }) => {
+const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed, currentCarModel, equippedParts = {}, carColor, username = '' }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { claimRewards, loading: claiming } = useClaimRewards();
     const { playSuccess } = useAudio();
     const { user } = usePrivy();
+
+    // P&L Card Modal State
+    const [showPnLCard, setShowPnLCard] = useState(false);
+    const [lastClaimedAmount, setLastClaimedAmount] = useState(0);
 
     // Fetch user rewards from database (claimable fees + lifetime earnings)
     const { claimableSol, lifetimeEarnings, onClaimSuccess } = useUserRewards(user?.wallet?.address);
@@ -149,20 +154,30 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
 
     const handleClaim = async () => {
         const totalClaimable = pendingRewards + claimableSol;
-        if (claiming || totalClaimable <= 0 || !user?.wallet?.address) return;
 
-        const result = await claimRewards(user.wallet.address);
+        // For testing: always allow click to preview P&L card
+        // TODO: Re-enable this check after testing
+        // if (claiming || totalClaimable <= 0 || !user?.wallet?.address) return;
+        if (claiming) return;
 
-        if (result.success) {
-            playSuccess(); // Play success sound
-            confetti({
-                particleCount: 150,
-                spread: 100,
-                origin: { x: 0.1, y: 0.5 },
-                colors: ['#FFD700', '#FFA500', '#FFFFFF']
-            });
-            if (onRewardsClaimed) onRewardsClaimed();
+        // If there's something to claim, process it
+        if (totalClaimable > 0 && user?.wallet?.address) {
+            const result = await claimRewards(user.wallet.address);
+            if (result.success) {
+                playSuccess();
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { x: 0.1, y: 0.5 },
+                    colors: ['#FFD700', '#FFA500', '#FFFFFF']
+                });
+                if (onRewardsClaimed) onRewardsClaimed();
+            }
         }
+
+        // Always show P&L Card (use mock amount if nothing claimed)
+        setLastClaimedAmount(totalClaimable > 0 ? totalClaimable : 0.123);
+        setShowPnLCard(true);
     };
 
     // Calculate stat bonuses from equipped parts
@@ -214,105 +229,114 @@ const SolanaPanel = ({ pendingRewards = 0, hourlyEarnings = 0, onRewardsClaimed,
     };
 
     return (
-        <motion.div
-            initial={{ x: -400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-            className="fixed left-8 top-24 bottom-32 w-80 z-30 flex flex-col"
-        >
-            {/* Unified Glass Container */}
-            <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col justify-between h-full shadow-2xl shadow-black/50">
+        <>
+            <motion.div
+                initial={{ x: -400, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                className="fixed left-8 top-24 bottom-32 w-80 z-30 flex flex-col"
+            >
+                {/* Unified Glass Container */}
+                <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col justify-between h-full shadow-2xl shadow-black/50">
 
-                {/* A. REWARDS */}
-                <div>
-                    <h3 className="text-base text-red-500 tracking-widest font-bold uppercase mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        Rewards
-                    </h3>
-
-                    {/* Rewards Display */}
-                    {/* Rewards Display - Reverted */}
-                    <div className="space-y-3 mb-4">
-                        <div className="flex justify-between items-end">
-                            <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hourly Yield</span>
-                            <span className="text-sm font-bold text-gray-400 font-mono">{hourlyEarnings.toFixed(5)} SOL</span>
-                        </div>
-                        <div className="flex justify-between items-end">
-                            <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL Earned</span>
-                            <span className="text-sm font-bold text-gray-400 font-mono">{lifetimeEarnings.toFixed(4)} SOL</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Centered Claimable Amount - Combined from props + database */}
-                <div className="flex flex-col items-center mt-6">
-                    {/* Show claimable fees from database if any */}
-                    {claimableSol > 0 && (
-                        <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1 font-bold">
-                            + {claimableSol.toFixed(4)} SOL from Fees
-                        </div>
-                    )}
-                    <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-bold text-white font-mono">
-                            {(pendingRewards + claimableSol).toFixed(3)}
-                        </span>
-                        <span className="text-sm text-gray-400 font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL</span>
-                    </div>
-                    <button
-                        onClick={handleClaim}
-                        disabled={(pendingRewards + claimableSol) <= 0 || claiming}
-                        className={`w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors
-                                ${(pendingRewards + claimableSol) > 0
-                                ? 'bg-red-600 hover:bg-red-500 text-white'
-                                : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
-                        style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
-                        {claiming ? 'Processing...' : 'Claim'}
-                    </button>
-                </div>
-
-
-                {/* divider */}
-                <div className="h-px w-full bg-white/5"></div>
-
-                {/* B. MARKET CAP */}
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-[20px] text-red-500 tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            $GEAR
+                    {/* A. REWARDS */}
+                    <div>
+                        <h3 className="text-base text-red-500 tracking-widest font-bold uppercase mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Rewards
                         </h3>
-                        <div className="flex items-center gap-2">
+
+                        {/* Rewards Display */}
+                        {/* Rewards Display - Reverted */}
+                        <div className="space-y-3 mb-4">
+                            <div className="flex justify-between items-end">
+                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hourly Yield</span>
+                                <span className="text-sm font-bold text-gray-400 font-mono">{hourlyEarnings.toFixed(5)} SOL</span>
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <span className="text-xs text-white tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL Earned</span>
+                                <span className="text-sm font-bold text-gray-400 font-mono">{lifetimeEarnings.toFixed(4)} SOL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Centered Claimable Amount - Combined from props + database */}
+                    <div className="flex flex-col items-center mt-6">
+                        {/* Show claimable fees from database if any */}
+                        {claimableSol > 0 && (
+                            <div className="text-[10px] text-green-400 uppercase tracking-wider mb-1 font-bold">
+                                + {claimableSol.toFixed(4)} SOL from Fees
+                            </div>
+                        )}
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-4xl font-bold text-white font-mono">
+                                {(pendingRewards + claimableSol).toFixed(3)}
+                            </span>
+                            <span className="text-sm text-gray-400 font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>SOL</span>
+                        </div>
+                        <button
+                            onClick={handleClaim}
+                            disabled={claiming}
+                            className="w-full py-3 mt-4 rounded-lg font-bold text-sm tracking-wider uppercase transition-colors bg-red-600 hover:bg-red-500 text-white"
+                            style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                            {claiming ? 'Processing...' : 'Claim'}
+                        </button>
+                    </div>
+
+
+                    {/* divider */}
+                    <div className="h-px w-full bg-white/5"></div>
+
+                    {/* B. MARKET CAP */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-[20px] text-red-500 tracking-widest font-bold uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                $GEAR
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                {tokenLoading ? (
+                                    <div className="h-4 w-16 bg-white/10 animate-pulse rounded"></div>
+                                ) : (
+                                    <span className="text-lg font-bold text-white font-mono">{formatLargeNumber(marketCap)}</span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="h-32 w-full opacity-80 mix-blend-screen flex items-center">
                             {tokenLoading ? (
-                                <div className="h-4 w-16 bg-white/10 animate-pulse rounded"></div>
+                                <div className="h-full w-full bg-white/5 animate-pulse rounded-lg"></div>
                             ) : (
-                                <span className="text-lg font-bold text-white font-mono">{formatLargeNumber(marketCap)}</span>
+                                chartData && <SimpleLineChart data={chartData} isPositive={chartData.isPositive} color={carColor} />
                             )}
                         </div>
                     </div>
-                    <div className="h-32 w-full opacity-80 mix-blend-screen flex items-center">
-                        {tokenLoading ? (
-                            <div className="h-full w-full bg-white/5 animate-pulse rounded-lg"></div>
-                        ) : (
-                            chartData && <SimpleLineChart data={chartData} isPositive={chartData.isPositive} color={carColor} />
-                        )}
+
+                    {/* divider */}
+                    <div className="h-px w-full bg-white/5"></div>
+
+                    {/* C. VEHICLE STATISTICS */}
+                    <div>
+                        <h3 className="text-base text-red-500 tracking-widest font-bold uppercase mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            STATS
+                        </h3>
+                        <StatBar label="Power" value={stats.power} max={600} />
+                        <StatBar label="Top Speed" value={stats.topSpeed} max={350} />
+                        <StatBar label="Acceleration" value={stats.acceleration} max={10} inverse={true} />
+                        <StatBar label="Weight" value={stats.weight} max={2000} />
                     </div>
+
                 </div>
+            </motion.div>
 
-                {/* divider */}
-                <div className="h-px w-full bg-white/5"></div>
-
-                {/* C. VEHICLE STATISTICS */}
-                <div>
-                    <h3 className="text-base text-red-500 tracking-widest font-bold uppercase mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        STATS
-                    </h3>
-                    <StatBar label="Power" value={stats.power} max={600} />
-                    <StatBar label="Top Speed" value={stats.topSpeed} max={350} />
-                    <StatBar label="Acceleration" value={stats.acceleration} max={10} inverse={true} />
-                    <StatBar label="Weight" value={stats.weight} max={2000} />
-                </div>
-
-            </div>
-        </motion.div >
+            {/* P&L Card Modal */}
+            <PnLCard
+                isOpen={showPnLCard}
+                onClose={() => setShowPnLCard(false)}
+                username={username || 'PLAYER'}
+                claimedAmount={lastClaimedAmount}
+                referralCode={username || 'PLAYER'}
+                carColor={carColor}
+            />
+        </>
     );
 };
 

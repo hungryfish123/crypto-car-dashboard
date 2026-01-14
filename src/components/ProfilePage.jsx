@@ -11,6 +11,8 @@ import GaragePassModal from './GaragePassModal';
 import ProfileCarViewer from './ProfileCarViewer';
 import { CAR_MODELS } from './CarModelSelector';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import PnLCard from './PnLCard';
+import confetti from 'canvas-confetti';
 
 const PLAYER_TAGS = [
     "Street King", "Drift Master", "Tarmac Terror", "Apex Predator", "Speed Demon",
@@ -35,6 +37,10 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
     const [xInput, setXInput] = useState('');
     const [savingX, setSavingX] = useState(false);
     const fileInputRef = useRef(null);
+
+    // P&L Card Modal State
+    const [showPnLCard, setShowPnLCard] = useState(false);
+    const [lastClaimedAmount, setLastClaimedAmount] = useState(0);
 
     // Claim Rewards Hook
     const { claimRewards, loading: claimLoading, error: claimError, txSignature } = useClaimRewards();
@@ -213,14 +219,29 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
     };
 
     const handleClaimRewards = async () => {
-        if (!walletAddress || pendingRewards <= 0 || claimLoading) return;
-        const result = await claimRewards(walletAddress);
-        if (result.success) {
-            playSuccess();
-            setClaimSuccess(true);
-            if (onRewardsClaimed) onRewardsClaimed(result.txSignature);
-            setTimeout(() => setClaimSuccess(false), 5000);
+        // For testing: always allow click to preview P&L card (same as main page)
+        if (claimLoading) return;
+
+        // If there's something to claim, process it
+        if (pendingRewards > 0 && walletAddress) {
+            const result = await claimRewards(walletAddress);
+            if (result.success) {
+                playSuccess();
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { x: 0.5, y: 0.5 },
+                    colors: ['#FFD700', '#FFA500', '#FFFFFF']
+                });
+                setClaimSuccess(true);
+                if (onRewardsClaimed) onRewardsClaimed(result.txSignature);
+                setTimeout(() => setClaimSuccess(false), 5000);
+            }
         }
+
+        // Always show P&L Card (use mock amount if nothing claimed)
+        setLastClaimedAmount(pendingRewards > 0 ? pendingRewards : 0.123);
+        setShowPnLCard(true);
     };
 
     const achievements = [
@@ -381,13 +402,8 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
 
                             <button
                                 onClick={handleClaimRewards}
-                                disabled={pendingRewards <= 0 || claimLoading}
-                                className={`w-full py-3 rounded-xl text-lg font-bold uppercase tracking-[0.15em] transition-all duration-300 ${claimSuccess
-                                    ? 'bg-green-500 text-white'
-                                    : pendingRewards > 0
-                                        ? 'bg-red-600 text-white hover:bg-red-700'
-                                        : 'bg-red-600 text-white'
-                                    }`}
+                                disabled={claimLoading}
+                                className="w-full py-3 rounded-xl text-lg font-bold uppercase tracking-[0.15em] transition-all duration-300 bg-red-600 text-white hover:bg-red-700"
                                 style={orbitronFont}
                             >
                                 {claimLoading ? (
@@ -618,6 +634,16 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* P&L Card Modal */}
+            <PnLCard
+                isOpen={showPnLCard}
+                onClose={() => setShowPnLCard(false)}
+                username={username || 'PLAYER'}
+                claimedAmount={lastClaimedAmount}
+                referralCode={username || 'PLAYER'}
+                carColor={carColor}
+            />
         </div>
     );
 };
