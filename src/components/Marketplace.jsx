@@ -79,13 +79,26 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                 displayPrice = item.price;
             }
 
+            // Calculate YIELD: (yield_weight / 1000) * 100%
+            // Common (1) = 0.1%, Uncommon (2) = 0.2%, etc.
+            const calculateYield = (yieldWeight) => {
+                if (!yieldWeight) return '0.0%';
+                const yieldPercent = (yieldWeight / 1000) * 100;
+                return `${yieldPercent.toFixed(1)}%`;
+            };
+
+            // Get yield_weight from DB mapping
+            const yieldWeight = dbMapping.yield_weight || 0;
+            const calculatedYield = calculateYield(yieldWeight);
+
             if (priceData) {
                 mergedItem = {
                     ...mergedItem,
                     price: displayPrice,
                     supply: displaySupply,
                     marketCap: priceData.market_cap > 0 ? `$${(priceData.market_cap / 1000).toFixed(1)}k` : "$0",
-                    holders: 0
+                    holders: priceData.holders || 0,
+                    cashback: calculatedYield
                 };
             } else {
                 // If no metrics fetched, override hardcoded values
@@ -94,14 +107,12 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                     price: displayPrice,
                     supply: displaySupply,
                     marketCap: "$0",
-                    holders: 0
+                    holders: 0,
+                    cashback: calculatedYield
                 };
             }
 
-            // Apply manual overrides from DB (Yield and Supply)
-            if (dbMapping.yield) {
-                mergedItem.cashback = dbMapping.yield; // Using cashback field as 'yield' display
-            }
+            // Apply manual supply override from DB
             if (dbMapping.override_supply) {
                 mergedItem.supply = dbMapping.override_supply;
             }

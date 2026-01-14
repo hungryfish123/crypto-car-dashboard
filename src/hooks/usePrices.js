@@ -1,31 +1,45 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
-const POLL_INTERVAL = 20000; // 20 seconds
+const POLL_INTERVAL = 30000; // 30 seconds (user requested)
 const MORALIS_API_KEY = import.meta.env.VITE_MORALIS_API_KEY;
+const CACHE_KEY = 'gear_prices_cache';
 
 /**
- * usePrices Hook (Direct Frontend Moralis)
+ * usePrices Hook
  * 
- * 1. Reads contract addresses from item_mappings table
- * 2. Calls Moralis API directly from browser
- * 3. Returns prices
- * 
- * NO Edge Functions. NO Cron. Just: DB → Moralis → Display.
+ * 1. Loads cached prices from localStorage immediately (no "fetching" animation)
+ * 2. Fetches fresh data in background
+ * 3. Updates cache every 30 seconds
  */
 export const usePrices = () => {
-    const [prices, setPrices] = useState({});
-    const [loading, setLoading] = useState(true);
+    // Initialize from localStorage cache (instant load, no "fetching" state)
+    const [prices, setPrices] = useState(() => {
+        try {
+            const cached = localStorage.getItem(CACHE_KEY);
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                console.log('[usePrices] Loaded from cache:', Object.keys(parsed).length, 'items');
+                return parsed;
+            }
+        } catch (e) {
+            console.warn('[usePrices] Cache parse error:', e);
+        }
+        return {};
+    });
+
+    // Start with loading=false if we have cache, true if no cache
+    const [loading, setLoading] = useState(() => {
+        try {
+            return !localStorage.getItem(CACHE_KEY);
+        } catch {
+            return true;
+        }
+    });
 
     const fetchPrices = useCallback(async () => {
         if (!isSupabaseConfigured || !supabase) {
             console.warn('[usePrices] Supabase not configured');
-            setLoading(false);
-            return;
-        }
-
-        if (!MORALIS_API_KEY) {
-            console.warn('[usePrices] VITE_MORALIS_API_KEY not set');
             setLoading(false);
             return;
         }
@@ -49,7 +63,7 @@ export const usePrices = () => {
                 return;
             }
 
-            // Filter valid CAs (at least 30 chars, not null/empty strings)
+            // Filter valid CAs (at least 30 chars)
             const validItems = items.filter(i =>
                 i.contract_address &&
                 i.contract_address.length > 30
@@ -57,40 +71,87 @@ export const usePrices = () => {
 
             console.log(`[usePrices] Found ${validItems.length} valid CAs`);
 
-            // 2. Fetch prices from Moralis for each CA
+            // 2. Count HOLDERS from player_data inventory
+            const holderCounts = {};
+            try {
+                const { data: allPlayers, error: playersError } = await supabase
+                    .from('player_data')
+                    .select('inventory');
+
+                if (!playersError && allPlayers) {
+                    allPlayers.forEach(player => {
+                        if (player.inventory && Array.isArray(player.inventory)) {
+                            const itemIds = new Set();
+                            player.inventory.forEach(invItem => {
+                                if (invItem && invItem.id) {
+                                    itemIds.add(invItem.id);
+                                }
+                            });
+                            itemIds.forEach(itemId => {
+                                holderCounts[itemId] = (holderCounts[itemId] || 0) + 1;
+                            });
+                        }
+                    });
+                }
+            } catch (holderErr) {
+                console.warn('[usePrices] Error counting holders:', holderErr.message);
+            }
+
+            // 3. Fetch PRICES from Moralis for each CA
             const priceMap = {};
 
-            for (const item of validItems) {
-                try {
-                    const response = await fetch(
-                        `https://solana-gateway.moralis.io/token/mainnet/${item.contract_address}/price`,
-                        {
-                            headers: {
-                                'X-API-Key': MORALIS_API_KEY,
-                                'Accept': 'application/json'
+            if (MORALIS_API_KEY) {
+                for (const item of validItems) {
+                    try {
+                        const priceResponse = await fetch(
+                            `https://solana-gateway.moralis.io/token/mainnet/${item.contract_address}/price`,
+                            {
+                                headers: {
+                                    'X-API-Key': MORALIS_API_KEY,
+                                    'Accept': 'application/json'
+                                }
                             }
-                        }
-                    );
+                        );
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        const price = parseFloat(data.usdPrice) || 0;
+                        let price = 0;
+                        if (priceResponse.ok) {
+                            const priceData = await priceResponse.json();
+                            price = parseFloat(priceData.usdPrice) || 0;
+                        }
+
                         priceMap[item.item_id] = {
                             price_usd: price,
-                            market_cap: price * 1_000_000_000, // 1B supply assumption
+                            market_cap: price * 1_000_000_000,
+                            holders: holderCounts[item.item_id] || 0,
                             updated_at: new Date().toISOString()
                         };
-                        console.log(`[usePrices] ${item.item_id}: $${price.toFixed(8)}`);
-                    } else {
-                        console.log(`[usePrices] ${item.item_id}: Moralis ${response.status}`);
+
+                    } catch (err) {
+                        console.error(`[usePrices] Error for ${item.item_id}:`, err.message);
                     }
-                } catch (err) {
-                    console.error(`[usePrices] Error for ${item.item_id}:`, err.message);
                 }
+            } else {
+                // No Moralis key - just set holders
+                validItems.forEach(item => {
+                    priceMap[item.item_id] = {
+                        price_usd: 0,
+                        market_cap: 0,
+                        holders: holderCounts[item.item_id] || 0,
+                        updated_at: new Date().toISOString()
+                    };
+                });
             }
 
             console.log(`[usePrices] Fetched ${Object.keys(priceMap).length} prices`);
+
+            // 4. Update state and cache
             setPrices(priceMap);
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(priceMap));
+                console.log('[usePrices] Saved to cache');
+            } catch (e) {
+                console.warn('[usePrices] Cache save error:', e);
+            }
 
         } catch (err) {
             console.error('[usePrices] Fatal error:', err);
@@ -100,10 +161,10 @@ export const usePrices = () => {
     }, []);
 
     useEffect(() => {
-        // Initial fetch
+        // Fetch fresh data (will update cache silently)
         fetchPrices();
 
-        // Poll every 20 seconds
+        // Poll every 30 seconds
         const interval = setInterval(fetchPrices, POLL_INTERVAL);
         return () => clearInterval(interval);
     }, [fetchPrices]);
