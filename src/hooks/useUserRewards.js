@@ -34,22 +34,19 @@ export function useUserRewards(walletAddress) {
                 .single();
 
             if (fetchError) {
-                if (fetchError.code === 'PGRST116') {
-                    // No record found - user hasn't received rewards yet
-                    setClaimableSol(0);
-                    setLifetimeEarnings(0);
-                    setLastClaimAt(null);
-                } else {
-                    throw fetchError;
-                }
+                // Don't throw - just log and use defaults
+                console.warn('[useUserRewards] DB error (ignored):', fetchError.message);
+                setClaimableSol(0);
+                setLifetimeEarnings(0);
+                setLastClaimAt(null);
             } else if (data) {
                 setClaimableSol(parseFloat(data.pending_rewards) || 0);
                 setLifetimeEarnings(parseFloat(data.total_sol_earned) || 0);
                 setLastClaimAt(data.last_claim_at ? new Date(data.last_claim_at) : null);
             }
         } catch (err) {
-            console.error('[useUserRewards] Error:', err);
-            setError(err.message);
+            // Catch everything - never crash the app
+            console.warn('[useUserRewards] Error (ignored):', err);
         } finally {
             setLoading(false);
         }

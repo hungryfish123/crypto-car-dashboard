@@ -1689,10 +1689,10 @@ function App() {
               <CustomFloor />
             )}
 
-            {/* Post Processing - multisampling={0} fixes alpha error */}
-            <EffectComposer disableNormalPass multisampling={0}>
+            {/* Post Processing DISABLED - was causing 'alpha' crash on initial load */}
+            {/* <EffectComposer disableNormalPass multisampling={0}>
               <Bloom luminanceThreshold={1.5} intensity={0.3} mipmapBlur />
-            </EffectComposer>
+            </EffectComposer> */}
 
             {/* Custom Pendulum Camera Controls */}
             <PendulumControls activePage={activePage} />

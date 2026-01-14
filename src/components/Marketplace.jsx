@@ -6,7 +6,7 @@ import MarketplacePopup from './MarketplacePopup';
 import LoginButton from './LoginButton';
 import InteractiveLogo from './InteractiveLogo';
 import { supabase } from '../supabaseClient';
-import { useTokenMetrics } from '../hooks/useTokenMetrics';
+import { usePrices } from '../hooks/usePrices';
 import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 import { useDynamicLinks } from '../hooks/useDynamicLinks';
@@ -26,12 +26,12 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
 
     const categories = ['All', 'Engines', 'Turbos', 'Suspensions', 'Wheels', 'Special'];
 
-    // Use cached token metrics from Edge Function
-    const { data: tokenMetrics, loading: metricsLoading } = useTokenMetrics();
+    // Use shared prices from Realtime subscription (same for all users)
+    const { prices, loading: pricesLoading } = usePrices();
 
     // Function to reload items from DB and merge with metrics
     const loadItems = async () => {
-        console.log('[Marketplace] Loading items with metrics:', tokenMetrics);
+        console.log('[Marketplace] Loading items with prices:', prices);
 
         // Get mappings from Supabase for hidden status, CAs, and manual overrides
         const { data: mappings } = await supabase.from('item_mappings').select('*');
@@ -53,13 +53,13 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
             }
 
             const ca = dbMapping.contract_address;
-            const metrics = tokenMetrics?.[item.id];
+            const priceData = prices?.[item.id];
 
             // Base merged item
             let mergedItem = {
                 ...item,
-                isCrypto: !!(ca || metrics?.ca),
-                ca: ca || metrics?.ca,
+                isCrypto: !!ca,
+                ca: ca,
                 buyUrl: dbMapping.buy_url || null
             };
 
@@ -72,20 +72,20 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
                 displaySupply = item.supply.split('/')[1];
             }
 
-            if (metrics && metrics.price > 0) {
-                displayPrice = `$${metrics.price.toFixed(6)}`;
+            if (priceData && priceData.price_usd > 0) {
+                displayPrice = `$${priceData.price_usd.toFixed(6)}`;
             } else if (item.price && !item.price.includes('CR')) {
                 // Keep non-CR prices (like '10 Tokens')
                 displayPrice = item.price;
             }
 
-            if (metrics) {
+            if (priceData) {
                 mergedItem = {
                     ...mergedItem,
                     price: displayPrice,
                     supply: displaySupply,
-                    marketCap: metrics.marketCap > 0 ? `$${(metrics.marketCap / 1000).toFixed(1)}k` : "$0",
-                    holders: metrics.holderCount || 0
+                    marketCap: priceData.market_cap > 0 ? `$${(priceData.market_cap / 1000).toFixed(1)}k` : "$0",
+                    holders: 0
                 };
             } else {
                 // If no metrics fetched, override hardcoded values
@@ -127,10 +127,10 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
         }
     };
 
-    // Refetch when token metrics change
+    // Refetch when prices change
     useEffect(() => {
         loadItems();
-    }, [tokenMetrics]);
+    }, [prices]);
 
     // REAL-TIME: Listen for database changes (Admin Panel updates)
     useEffect(() => {
@@ -151,7 +151,7 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [tokenMetrics]);
+    }, [prices]);
     // Items imported from data file
 
 
