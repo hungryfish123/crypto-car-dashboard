@@ -101,16 +101,17 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                 initial={{ y: -20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.4 }}
-                                className="inline-flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-red-600/20 border border-red-500/50 backdrop-blur-md"
+                                className="inline-flex items-center justify-center w-20 h-20 mb-6"
                             >
-                                <Lock className="w-8 h-8 text-red-500" />
+                                <img
+                                    src="/favicon_lock.png"
+                                    alt="Lock"
+                                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+                                />
                             </motion.div>
                             <h1 className="text-4xl font-bold text-white mb-2 font-['Orbitron'] tracking-wider">
-                                RESTRICTED ACCESS
+                                INVITE CODE ONLY
                             </h1>
-                            <p className="text-gray-400 text-sm tracking-[0.2em] uppercase">
-                                Authorized Personnel Only
-                            </p>
                         </div>
 
                         {/* Input Form */}
