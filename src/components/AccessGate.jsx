@@ -104,7 +104,7 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                 className="inline-flex items-center justify-center w-20 h-20 mb-6"
                             >
                                 <img
-                                    src="/favicon_lock.png"
+                                    src="/custom_lock.png"
                                     alt="Lock"
                                     className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]"
                                 />
