@@ -438,7 +438,7 @@ const FeeDashboard = ({ items, itemDetails }) => {
     const [loading, setLoading] = useState(true);
 
     // Treasury wallet address to watch
-    const TREASURY_WALLET = '967NP22RYpMydnMdtT7QF8f3oahZZx18hwULXcn9iadM';
+    const TREASURY_WALLET = 'cLaimUeEMC13r8Hf1CLen1Sn723pM5UEpZX1ZmEg2CN';
     const TREASURY_RESERVE = 0.01; // Keep 0.01 SOL for fees
 
     useEffect(() => {

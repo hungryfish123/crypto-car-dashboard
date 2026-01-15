@@ -64,58 +64,63 @@ const Marketplace = ({ addToInventory, onProfileClick, initialSelectedItem, clea
             };
 
             // Apply metrics if available, otherwise default to 0/empty as requested
-            let displayPrice = null;
-            let displaySupply = item.supply;
+            // 1. Determine Final Output Supply 
+            // Priority: DB Override > Item Default > 0
+            let displaySupply = dbMapping.override_supply || item.supply;
 
             // Clean supply string: "1000/1000" -> "1000"
-            if (item.supply && item.supply.includes('/')) {
-                displaySupply = item.supply.split('/')[1];
+            if (displaySupply && typeof displaySupply === 'string' && displaySupply.includes('/')) {
+                displaySupply = displaySupply.split('/')[1];
             }
 
+            // Parse numeric supply for calculation (remove commas/non-digits)
+            const numericSupply = typeof displaySupply === 'string'
+                ? parseFloat(displaySupply.replace(/,/g, '').replace(/[^0-9.]/g, ''))
+                : (typeof displaySupply === 'number' ? displaySupply : 0);
+
+            // 2. Determine Price & Market Cap
+            let displayPrice = null;
+            let displayMarketCap = "$0";
+
             if (priceData && priceData.price_usd > 0) {
+                // Show live crypto price
                 displayPrice = `$${priceData.price_usd.toFixed(6)}`;
+
+                // Calculate Market Cap = Supply * Price
+                const rawMC = numericSupply * priceData.price_usd;
+
+                // Format MC
+                if (rawMC >= 1e6) {
+                    displayMarketCap = `$${(rawMC / 1e6).toFixed(2)}M`;
+                } else if (rawMC >= 1e3) {
+                    displayMarketCap = `$${(rawMC / 1e3).toFixed(2)}k`;
+                } else {
+                    displayMarketCap = `$${rawMC.toFixed(2)}`;
+                }
+
             } else if (item.price && !item.price.includes('CR')) {
-                // Keep non-CR prices (like '10 Tokens')
+                // Keep non-CR prices (static)
                 displayPrice = item.price;
             }
 
             // Calculate YIELD: (yield_weight / 1000) * 100%
-            // Common (1) = 0.1%, Uncommon (2) = 0.2%, etc.
             const calculateYield = (yieldWeight) => {
                 if (!yieldWeight) return '0.0%';
                 const yieldPercent = (yieldWeight / 1000) * 100;
                 return `${yieldPercent.toFixed(1)}%`;
             };
-
-            // Get yield_weight from DB mapping
             const yieldWeight = dbMapping.yield_weight || 0;
             const calculatedYield = calculateYield(yieldWeight);
 
-            if (priceData) {
-                mergedItem = {
-                    ...mergedItem,
-                    price: displayPrice,
-                    supply: displaySupply,
-                    marketCap: priceData.market_cap > 0 ? `$${(priceData.market_cap / 1000).toFixed(1)}k` : "$0",
-                    holders: priceData.holders || 0,
-                    cashback: calculatedYield
-                };
-            } else {
-                // If no metrics fetched, override hardcoded values
-                mergedItem = {
-                    ...mergedItem,
-                    price: displayPrice,
-                    supply: displaySupply,
-                    marketCap: "$0",
-                    holders: 0,
-                    cashback: calculatedYield
-                };
-            }
-
-            // Apply manual supply override from DB
-            if (dbMapping.override_supply) {
-                mergedItem.supply = dbMapping.override_supply;
-            }
+            // Construct Final Merged Item
+            mergedItem = {
+                ...mergedItem,
+                price: displayPrice,
+                supply: displaySupply, // Use the clean/overridden supply
+                marketCap: displayMarketCap,
+                holders: priceData ? (priceData.holders || 0) : 0,
+                cashback: calculatedYield
+            };
 
             return mergedItem;
         });
