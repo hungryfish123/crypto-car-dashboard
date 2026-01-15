@@ -104,9 +104,9 @@ const AccessGate = ({ onUnlock, correctCode = "M4UR0" }) => {
                                 className="inline-flex items-center justify-center w-20 h-20 mb-6"
                             >
                                 <img
-                                    src="/custom_lock.png"
-                                    alt="Lock"
-                                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(220,38,38,0.5)]"
+                                    src="/gear_icon.png"
+                                    alt="Gear Icon"
+                                    className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]"
                                 />
                             </motion.div>
                             <h1 className="text-4xl font-bold text-white mb-2 font-['Orbitron'] tracking-wider">
