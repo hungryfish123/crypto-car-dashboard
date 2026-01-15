@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Wallet, Trophy, Car, Package, Settings, ExternalLink, Copy, Check, Shield, Zap, TrendingUp, Edit, X, Lock, Clock, Gift, Coins, BarChart3, Activity } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { getReferralHistory } from '../dbServices';
-import { useClaimRewards } from '../hooks/useClaimRewards';
 import { useAudio } from '../hooks/useAudio';
 import { supabase } from '../supabaseClient';
 import InteractiveLogo from './InteractiveLogo';
@@ -12,6 +11,7 @@ import ProfileCarViewer from './ProfileCarViewer';
 import { CAR_MODELS } from './CarModelSelector';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import PnLCard from './PnLCard';
+import GarageCountdown from './GarageCountdown';
 import confetti from 'canvas-confetti';
 
 const PLAYER_TAGS = [
@@ -21,7 +21,7 @@ const PLAYER_TAGS = [
     "Nitrous Nomad", "Shift Shifter", "Garage Guru", "Wheel Wizard", "Road Warrior"
 ];
 
-const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '', pendingRewards = 0, onRewardsClaimed, username = '', avatarUrl = '', onAvatarUpdated, hourlyEarnings = '0.0000', totalEarned = 0, currentCarModel, carColor, carFinish, ownedCars = ['bmw_m3_e30'] }) => {
+const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referralCode = '', pendingRewards = 0, totalEarned = 0, hourlyRate = 0, claimRewards, rewardsLoading = false, rewardsClaimError, rewardsClaimSuccess, onRewardsClaimed, username = '', avatarUrl = '', onAvatarUpdated, hourlyEarnings = '0.0000', currentCarModel, carColor, carFinish, ownedCars = ['bmw_m3_e30'] }) => {
     const { user, authenticated, logout, login } = usePrivy();
     const [copied, setCopied] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
@@ -42,8 +42,10 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
     const [showPnLCard, setShowPnLCard] = useState(false);
     const [lastClaimedAmount, setLastClaimedAmount] = useState(0);
 
-    // Claim Rewards Hook
-    const { claimRewards, loading: claimLoading, error: claimError, txSignature } = useClaimRewards();
+    // Use centralized rewards from props (passed from App.jsx)
+    const claimLoading = rewardsLoading;
+    const claimError = rewardsClaimError;
+    const hookClaimSuccess = rewardsClaimSuccess;
     const { playSuccess } = useAudio();
 
     // Authentication check (Privy only)
@@ -219,12 +221,11 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
     };
 
     const handleClaimRewards = async () => {
-        // For testing: always allow click to preview P&L card (same as main page)
         if (claimLoading) return;
 
         // If there's something to claim, process it
-        if (pendingRewards > 0 && walletAddress) {
-            const result = await claimRewards(walletAddress);
+        if (pendingRewards > 0) {
+            const result = await claimRewards();
             if (result.success) {
                 playSuccess();
                 confetti({
@@ -236,10 +237,15 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                 setClaimSuccess(true);
                 if (onRewardsClaimed) onRewardsClaimed(result.txSignature);
                 setTimeout(() => setClaimSuccess(false), 5000);
+
+                // Show P&L Card with actual claimed amount
+                setLastClaimedAmount(result.amount);
+                setShowPnLCard(true);
+                return;
             }
         }
 
-        // Always show P&L Card (use mock amount if nothing claimed)
+        // If nothing to claim, just show P&L Card with current pending (or mock)
         setLastClaimedAmount(pendingRewards > 0 ? pendingRewards : 0.123);
         setShowPnLCard(true);
     };
@@ -394,7 +400,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             <div className="text-center py-2">
                                 <div className="flex items-baseline justify-center gap-2">
                                     <span className="text-5xl font-bold text-white" style={orbitronFont}>
-                                        {pendingRewards > 0 ? pendingRewards.toFixed(4) : '0.0010'}
+                                        {pendingRewards > 0 ? pendingRewards.toFixed(4) : '0.0000'}
                                     </span>
                                     <span className="text-sm font-bold text-gray-500 uppercase tracking-widest">SOL</span>
                                 </div>
@@ -418,7 +424,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             </button>
 
                             {/* Validation Messages */}
-                            {txSignature && claimSuccess && (<a href={`https://solscan.io/tx/${txSignature}`} target="_blank" rel="noopener noreferrer" className="block text-center text-xs text-green-400 hover:text-green-300 underline mt-2" style={orbitronFont}> View on Solscan → </a>)}
+                            {hookClaimSuccess?.txSignature && claimSuccess && (<a href={`https://solscan.io/tx/${hookClaimSuccess.txSignature}`} target="_blank" rel="noopener noreferrer" className="block text-center text-xs text-green-400 hover:text-green-300 underline mt-2" style={orbitronFont}> View on Solscan → </a>)}
                             {claimError && <div className="text-center text-xs text-red-500 mt-2 font-bold uppercase" style={orbitronFont}>{claimError}</div>}
                         </div>
 
@@ -549,7 +555,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                             <div className="flex items-center gap-6">
                                 {/* Image Layer */}
                                 <div className="w-20 h-20 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center overflow-hidden shadow-lg group-hover:scale-105 transition-transform duration-300">
-                                    <img src="/garage-pass.webp" alt="Pass" className="w-full h-full object-cover" />
+                                    <img src="/garage-pass.jpg" alt="Pass" className="w-full h-full object-cover" />
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-white group-hover:text-white transition-colors uppercase italic tracking-wider" style={orbitronFont}>
@@ -565,7 +571,7 @@ const ProfilePage = ({ inventory = [], equippedParts = {}, earnings = 0, referra
                                 </div>
                             </div>
                             <div className="text-right">
-                                <div className="text-2xl font-bold text-gray-400 group-hover:text-white transition-colors mb-1" style={orbitronFont}>0.2 SOL</div>
+                                <GarageCountdown size="text-2xl" />
                             </div>
                         </div>
                     </motion.div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, DollarSign, Wallet, Activity, Gauge, Zap, Weight, Award } from 'lucide-react';
 import { useSolanaToken } from '../hooks/useSolanaToken';
-import { useRewards } from '../hooks/useRewards';  // New hook
 import { useUserRewards } from '../hooks/useUserRewards'; // Keeping for claimableSol (fees)
 import { useAudio } from '../hooks/useAudio';
 import { usePrivy } from '@privy-io/react-auth';
@@ -153,7 +152,7 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     );
 };
 
-const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, carColor, username = '' }) => {
+const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, carColor, username = '', pendingRewards = 0, totalEarned = 0, hourlyRate = 0, claimRewards, rewardsLoading = false, rewardsClaimError, rewardsClaimSuccess }) => {
     const { marketCap, chartData, loading: tokenLoading } = useSolanaToken();
     const { playSuccess } = useAudio();
     const { user } = usePrivy();
@@ -165,17 +164,10 @@ const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, ca
     // Use legacy fees claim hook as backup/additive
     const { claimableSol: feesSol } = useUserRewards(user?.wallet?.address);
 
-    // New Real-time Rewards Hook
-    const {
-        pendingRewards, // Live calculated rewards
-        hourlyRate,
-        totalEarned,
-        claimRewards,
-        isLoading: claiming,
-        claimSuccess,
-        claimError,
-        clearClaimStatus
-    } = useRewards(user?.wallet?.address, equippedParts, YIELD_WEIGHTS);
+    // Use centralized rewards from props (passed from App.jsx)
+    const claiming = rewardsLoading;
+    const claimSuccess = rewardsClaimSuccess;
+    const claimError = rewardsClaimError;
 
     const formatLargeNumber = (num) => {
         if (!num) return '$0';
@@ -377,7 +369,7 @@ const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, ca
                 isLoading={claiming}
                 success={claimSuccess}
                 error={claimError}
-                onClose={clearClaimStatus}
+                onClose={onRewardsClaimed}
             />
         </>
     );

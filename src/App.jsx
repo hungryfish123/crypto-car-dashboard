@@ -9,6 +9,7 @@ import { AppleStyleDock } from './components/AppleStyleDock';
 import GarageHUD from './components/GarageHUD';
 import { useDynamicLinks } from './hooks/useDynamicLinks';
 import { useRewardRate } from './hooks/useRewardRate'; // New Hook
+import { useRewards } from './hooks/useRewards'; // Centralized Rewards Hook
 import LoginButton from './components/LoginButton';
 import { usePrivy } from '@privy-io/react-auth';
 import { fetchUserData, saveUserData } from './dbServices';
@@ -19,6 +20,7 @@ import CarModelSelector, { CAR_MODELS } from './components/CarModelSelector';
 import AccessGate from './components/AccessGate';
 import UsernameModal from './components/UsernameModal';
 import { Loader2 } from 'lucide-react'; // Import Loader icon
+import RaceCountdown from './components/RaceCountdown'; // Race Countdown Timer
 
 // Lazy Load Heavy Components
 const Marketplace = React.lazy(() => import('./components/Marketplace'));
@@ -40,6 +42,18 @@ import { MARKETPLACE_ITEMS } from './data/marketplaceItems';
 
 // Preload the default car model early for faster LCP
 useGLTF.preload('/bmw_m3_coupe_e30_1986.glb');
+
+// Centralized YIELD_WEIGHTS (must match SolanaPanel)
+const YIELD_WEIGHTS = {
+  'eng_lv1': 1, 'eng_lv2': 2, 'eng_lv3': 4, 'eng_lv4': 8, 'eng_lv5': 16,
+  'turbo_lv1': 1, 'turbo_lv2': 2, 'turbo_lv3': 4, 'turbo_lv4': 8, 'turbo_lv5': 16,
+  'susp_lv1': 1, 'susp_lv2': 2, 'susp_lv3': 4, 'susp_lv4': 8, 'susp_lv5': 16,
+  'sus_lv1': 1, 'sus_lv2': 2, 'sus_lv3': 4, 'sus_lv4': 8, 'sus_lv5': 16,
+  'wheel_lv1': 1, 'wheel_lv2': 2, 'wheel_lv3': 4, 'wheel_lv4': 8, 'wheel_lv5': 16,
+  'wheels_lv1': 1, 'wheels_lv2': 2, 'wheels_lv3': 4, 'wheels_lv4': 8, 'wheels_lv5': 16,
+  'special_seat': 33, 'special_brakes': 33, 'special_nitro': 33, 'special_rainbow': 33,
+  'vw_golf_gti_mk2': 20, 'audi_sport_quattro': 20, 'mazda_mx5_na': 20, 'ferrari_f40': 20, 'lamborghini_huracan_2015': 20
+};
 
 
 function IntroCamera() {
@@ -1045,8 +1059,17 @@ function App() {
   const [username, setUsername] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
 
-  // Pending Rewards State (for Treasury Payout)
-  const [pendingRewards, setPendingRewards] = useState(0);
+  // Centralized Rewards Hook - Single source of truth for both Garage and Profile pages
+  const {
+    pendingRewards,
+    totalEarned: rewardsTotalEarned,
+    hourlyRate: rewardsHourlyRate,
+    claimRewards: centralClaimRewards,
+    isLoading: rewardsLoading,
+    claimError: rewardsClaimError,
+    claimSuccess: rewardsClaimSuccess,
+    clearClaimStatus: rewardsClearClaimStatus
+  } = useRewards(user?.wallet?.address, equippedPartsByCar, YIELD_WEIGHTS, ownedCars);
 
   // Total Earned (Referral Earnings)
   const [referralEarnings, setReferralEarnings] = useState(0);
@@ -1296,6 +1319,15 @@ function App() {
             });
           }
 
+          // Load owned cars from database (merge with localStorage cache)
+          if (data.owned_cars && Array.isArray(data.owned_cars)) {
+            console.log('[App] Loading owned_cars from database:', data.owned_cars);
+            setOwnedCars(prev => {
+              const merged = new Set([...prev, ...data.owned_cars]);
+              return Array.from(merged);
+            });
+          }
+
           // ==============================================
           // FETCH PERSISTED CAR UNLOCKS from user_unlocks table
           // ==============================================
@@ -1417,6 +1449,16 @@ function App() {
                             }
                             return prev;
                           });
+
+                          // Persist to user_unlocks table (so it survives page reloads)
+                          const walletAddr = user?.wallet?.address;
+                          if (walletAddr) {
+                            supabase
+                              .from('user_unlocks')
+                              .upsert({ user_wallet: walletAddr, car_id: itemId }, { onConflict: 'user_wallet,car_id' })
+                              .then(() => console.log(`[WalletSync] ✅ Persisted car unlock: ${itemId}`))
+                              .catch(err => console.warn('[WalletSync] Failed to persist unlock:', err));
+                          }
                         } else if (!existingIds.has(itemId)) {
                           console.log('[WalletSync] 🎉 Found matching token!', itemId, 'Balance:', balance);
 
@@ -1498,9 +1540,6 @@ function App() {
           setReferralCode(data.referral_code || '');
           setUsername(data.username || '');
           setAvatarUrl(data.avatar_url || '');
-          const pending = Number(data.pending_rewards) || 0;
-          console.log('💰 [App] Loaded Pending Rewards:', pending);
-          setPendingRewards(pending);
           setReferralEarnings(Number(data.referral_earnings) || 0);
           setIsDataLoaded(true); // Enable auto-save now that data is loaded
         }
@@ -1720,7 +1759,13 @@ function App() {
             draggedItem={draggedItem}
             setSceneBackground={setSceneBackground}
             pendingRewards={pendingRewards}
-            onRewardsClaimed={() => setPendingRewards(0)}
+            totalEarned={rewardsTotalEarned}
+            hourlyRate={rewardsHourlyRate}
+            claimRewards={centralClaimRewards}
+            rewardsLoading={rewardsLoading}
+            rewardsClaimError={rewardsClaimError}
+            rewardsClaimSuccess={rewardsClaimSuccess}
+            onRewardsClaimed={() => rewardsClearClaimStatus && rewardsClearClaimStatus()}
             hourlyEarnings={
               inventory.reduce((total, item) => {
                 const yieldVal = parseFloat((item.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
@@ -1768,146 +1813,190 @@ function App() {
       </AnimatePresence>
 
       {/* Race Page - Locked Interface */}
-      {activePage === 'Race' && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-black overflow-hidden">
-          {/* Cyber-Grid Background - Kept as requested */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      {/* Race Page - Locked Interface */}
+      {activePage === 'Race' && (() => {
+        // Calculate dynamic theme color based on car color
+        let displayThemeColor = carColor;
+        if (carColor === '#000000') displayThemeColor = '#9ca3af'; // Gray-400 for visibility on black
+        if (carColor === '#ffffff') displayThemeColor = '#ffffff';
 
-          {/* Main Card */}
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="relative max-w-2xl w-full p-12 border border-white/10 bg-black/60 backdrop-blur-xl flex flex-col items-center text-center rounded-3xl"
-          >
-            {/* Lock Icon */}
-            <div className="mb-8 relative">
-              <Lock className="w-24 h-24 text-red-500 opacity-90 animate-pulse relative z-10" />
-            </div>
+        return (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black overflow-hidden">
+            {/* Cyber-Grid Background */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-            {/* Title */}
-            <h1
-              className="text-5xl font-bold italic uppercase text-red-500 mb-2 tracking-wider"
-              style={{ fontFamily: 'Orbitron, sans-serif' }}
+            {/* Main Card */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="relative max-w-3xl w-full p-16 border flex flex-col items-center text-center rounded-[3rem] overflow-hidden shadow-2xl"
+              style={{
+                background: 'rgba(0, 0, 0, 0.6)', // Darker background
+                backdropFilter: 'blur(40px)',     // Heavy blur
+                WebkitBackdropFilter: 'blur(40px)',
+                borderColor: `${displayThemeColor}30`, // Subtle colored border, no glow
+                boxShadow: 'none' // Explicitly removed glow around module
+              }}
             >
-              RACE MODE LOCKED
-            </h1>
+              {/* Dynamic Background Gradient - Very faint and internal only */}
+              <div
+                className="absolute inset-0 opacity-10 pointer-events-none"
+                style={{
+                  background: `linear-gradient(180deg, ${displayThemeColor}20 0%, transparent 100%)`
+                }}
+              ></div>
 
-            {/* Subtitle */}
-            <p className="text-lg text-white tracking-[0.2em] font-medium mb-12 uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              Server maintenance in progress. The streets are closed.
-            </p>
+              {/* Content Container - Using Flex Gap for even spacing */}
+              <div className="relative z-10 flex flex-col items-center w-full gap-10 py-4">
 
-            {/* Notify Button */}
-            <a
-              href={links.race_notify}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative px-12 py-4 bg-transparent border border-white/20 text-white overflow-hidden transition-all duration-300 rounded-lg block w-fit mx-auto cursor-pointer hover:border-white/40"
-            >
-              <div className="absolute inset-0 w-full h-full bg-red-600 -translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out z-0"></div>
-              <span className="relative z-10 font-bold uppercase tracking-widest text-lg flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                <Bell size={20} />
-                Notify When Live
-              </span>
-            </a>
+                {/* Title Group */}
+                <div className="flex flex-col items-center w-full">
+                  {/* DYNAMIC COLORED TITLE */}
+                  <h1
+                    className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none mb-2"
+                    style={{
+                      fontFamily: 'Orbitron, sans-serif',
+                      color: displayThemeColor,
+                    }}
+                  >
+                    RACE MODE
+                  </h1>
 
-            {/* Footer Text */}
-            <div className="mt-8 text-xs text-gray-400 font-mono flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-              <span>Launching soon...</span>
-            </div>
-          </motion.div>
-        </div>
-      )}
+                  {/* SMALL WHITE SUBTITLE */}
+                  <div className="w-full flex justify-between px-2">
+                    <span
+                      className="text-white font-bold tracking-[0.3em] text-sm md:text-lg uppercase w-full"
+                      style={{ fontFamily: 'Orbitron, sans-serif' }}
+                    >
+                      Unlocks in Season 2
+                    </span>
+                  </div>
+                </div>
+
+                {/* Countdown Timer */}
+                <div className="scale-90 md:scale-100">
+                  <RaceCountdown />
+                </div>
+
+                {/* Notify Button */}
+                <a
+                  href={links.race_notify}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group relative px-12 py-4 bg-transparent border border-white/10 text-white overflow-hidden transition-all duration-300 rounded-lg block w-fit mx-auto cursor-pointer hover:border-white/30"
+                >
+                  <div
+                    className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out z-0 -translate-x-full group-hover:translate-x-0"
+                    style={{ backgroundColor: displayThemeColor }}
+                  ></div>
+                  <span className="relative z-10 font-bold uppercase tracking-widest text-lg flex items-center gap-2" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                    <Bell size={20} />
+                    Notify When Live
+                  </span>
+                </a>
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
 
 
 
 
       {/* Paint Shop - Only visible in Paint Shop tab */}
       {/* Paint Shop - Only visible in Paint Shop tab */}
-      {activePage === 'Paint Shop' && (
-        <React.Suspense fallback={null}>
-          <PaintShop
-            carColor={carColor}
-            setCarColor={setCarColor}
-            carFinish={carFinish}
-            setCarFinish={setCarFinish}
-            hue={hue}
-            setHue={setHue}
-            saturation={saturation}
-            setSaturation={setSaturation}
-            lightness={lightness}
-            setLightness={setLightness}
-            environment={environment}
-            setEnvironment={setEnvironment}
-            sceneBackground={sceneBackground}
-            setSceneBackground={setSceneBackground}
-            specialEffect={specialEffect}
-            setSpecialEffect={setSpecialEffect}
-            rainbowUnlocked={rainbowUnlocked}
-            onUnlockRainbow={handleUnlockRainbow}
-            themeColor={themeColor}
-            setThemeColor={setThemeColor}
-          />
-        </React.Suspense>
-      )}
+      {
+        activePage === 'Paint Shop' && (
+          <React.Suspense fallback={null}>
+            <PaintShop
+              carColor={carColor}
+              setCarColor={setCarColor}
+              carFinish={carFinish}
+              setCarFinish={setCarFinish}
+              hue={hue}
+              setHue={setHue}
+              saturation={saturation}
+              setSaturation={setSaturation}
+              lightness={lightness}
+              setLightness={setLightness}
+              environment={environment}
+              setEnvironment={setEnvironment}
+              sceneBackground={sceneBackground}
+              setSceneBackground={setSceneBackground}
+              specialEffect={specialEffect}
+              setSpecialEffect={setSpecialEffect}
+              rainbowUnlocked={rainbowUnlocked}
+              onUnlockRainbow={handleUnlockRainbow}
+              themeColor={themeColor}
+              setThemeColor={setThemeColor}
+            />
+          </React.Suspense>
+        )
+      }
 
       {/* Username Onboarding Modal */}
-      {showUsernameModal && (
-        <UsernameModal
-          walletAddress={user?.wallet?.address}
-          onComplete={(newUsername) => {
-            setShowUsernameModal(false);
-            // After username is set, update the referral code to match
-            setUsername(newUsername);
-            setReferralCode(newUsername.toUpperCase());
-          }}
-        />
-      )}
+      {
+        showUsernameModal && (
+          <UsernameModal
+            walletAddress={user?.wallet?.address}
+            onComplete={(newUsername) => {
+              setShowUsernameModal(false);
+              // After username is set, update the referral code to match
+              setUsername(newUsername);
+              setReferralCode(newUsername.toUpperCase());
+            }}
+          />
+        )
+      }
 
       {/* Leaderboard Page */}
-      {activePage === 'Leaderboard' && (
-        <React.Suspense fallback={<PageLoader />}>
-          <Leaderboard
-            onBack={() => setActivePage('Garage')}
-            onProfileClick={() => setActivePage('Profile')}
-            carColor={carColor}
-          />
-        </React.Suspense>
-      )}
+      {
+        activePage === 'Leaderboard' && (
+          <React.Suspense fallback={<PageLoader />}>
+            <Leaderboard
+              onBack={() => setActivePage('Garage')}
+              onProfileClick={() => setActivePage('Profile')}
+              carColor={carColor}
+            />
+          </React.Suspense>
+        )
+      }
 
       {/* Profile Page */}
       {/* Profile Page */}
-      {activePage === 'Profile' && (
-        <React.Suspense fallback={<PageLoader />}>
-          <ProfilePage
-            inventory={inventory}
-            equippedParts={equippedPartsByCar}
-            earnings={earnings}
-            referralCode={referralCode}
-            pendingRewards={pendingRewards}
-            onRewardsClaimed={() => setPendingRewards(0)}
-            username={username}
-            avatarUrl={avatarUrl}
-            onAvatarUpdated={(url) => setAvatarUrl(url)}
-            hourlyEarnings={
-              (inventory.reduce((total, item) => {
-                const yieldVal = parseFloat((item.cashback || '0').replace(/[^0-9.]/g, '')) || 0;
-                return total + (yieldVal * (item.quantity || 1));
-              }, 0) * rewardRate).toFixed(5)
-            }
-            totalEarned={activePage === 'Profile' ? referralEarnings : 0}
-            currentCarModel={currentCarModel}
-            carColor={carColor}
-            carFinish={carFinish}
-            ownedCars={ownedCars}
-          />
-        </React.Suspense>
-      )}
+      {
+        activePage === 'Profile' && (
+          <React.Suspense fallback={<PageLoader />}>
+            <ProfilePage
+              inventory={inventory}
+              equippedParts={equippedPartsByCar}
+              earnings={earnings}
+              referralCode={referralCode}
+              pendingRewards={pendingRewards}
+              totalEarned={rewardsTotalEarned}
+              hourlyRate={rewardsHourlyRate}
+              claimRewards={centralClaimRewards}
+              rewardsLoading={rewardsLoading}
+              rewardsClaimError={rewardsClaimError}
+              rewardsClaimSuccess={rewardsClaimSuccess}
+              onRewardsClaimed={() => rewardsClearClaimStatus && rewardsClearClaimStatus()}
+              username={username}
+              avatarUrl={avatarUrl}
+              onAvatarUpdated={(url) => setAvatarUrl(url)}
+              hourlyEarnings={rewardsHourlyRate.toFixed(5)}
+              currentCarModel={currentCarModel}
+              carColor={carColor}
+              carFinish={carFinish}
+              ownedCars={ownedCars}
+            />
+          </React.Suspense>
+        )
+      }
 
       {/* Apple Dock - Always Last/Top */}
       <AppleStyleDock activePage={activePage} setActivePage={setActivePage} />
-    </div>
+    </div >
   );
 }
 

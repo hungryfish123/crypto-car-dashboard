@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock } from 'lucide-react';
+import GarageCountdown from './GarageCountdown';
 
 const GaragePassModal = ({ isOpen, onClose, carColor = '#dc2626' }) => {
     const orbitronFont = { fontFamily: 'Orbitron, sans-serif' };
@@ -16,7 +17,12 @@ const GaragePassModal = ({ isOpen, onClose, carColor = '#dc2626' }) => {
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
-    const glowColor = carColor || '#dc2626';
+    // Color Logic (Matching Race Mode)
+    let displayThemeColor = carColor || '#dc2626';
+    if (displayThemeColor === '#000000' || displayThemeColor === '#000') displayThemeColor = '#9ca3af';
+    if (displayThemeColor === '#ffffff' || displayThemeColor === '#fff') displayThemeColor = '#ffffff';
+
+    const glowColor = displayThemeColor;
 
     return (
         <AnimatePresence>
@@ -36,9 +42,22 @@ const GaragePassModal = ({ isOpen, onClose, carColor = '#dc2626' }) => {
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative w-full max-w-2xl bg-black/80 border border-white/10 rounded-2xl p-8 overflow-hidden"
-                        style={{ boxShadow: `0 0 50px ${hexToRgba(glowColor, 0.3)}` }}
+                        className="relative w-full max-w-2xl p-8 overflow-hidden border rounded-[3rem]"
+                        style={{
+                            background: 'rgba(0, 0, 0, 0.6)',
+                            backdropFilter: 'blur(40px)',
+                            WebkitBackdropFilter: 'blur(40px)',
+                            borderColor: `${displayThemeColor}30`,
+                            boxShadow: 'none'
+                        }}
                     >
+                        {/* Dynamic Background Gradient */}
+                        <div
+                            className="absolute inset-0 opacity-10 pointer-events-none"
+                            style={{
+                                background: `linear-gradient(180deg, ${displayThemeColor}20 0%, transparent 100%)`
+                            }}
+                        ></div>
                         {/* Close Button */}
                         <button
                             onClick={onClose}
@@ -59,12 +78,12 @@ const GaragePassModal = ({ isOpen, onClose, carColor = '#dc2626' }) => {
                             >
                                 <Lock size={40} style={{ color: glowColor }} />
                             </div>
-                            <h2 className="text-3xl font-bold text-white uppercase tracking-widest mb-2" style={orbitronFont}>
+                            <h2 className="text-3xl font-bold uppercase tracking-widest mb-4 transition-colors" style={{ ...orbitronFont, color: glowColor }}>
                                 Garage Pass
                             </h2>
-                            <p className="font-bold uppercase tracking-[0.2em] text-sm animate-pulse" style={{ color: glowColor }}>
-                                Coming Soon
-                            </p>
+                            <div>
+                                <GarageCountdown showLabel={false} size="text-xl md:text-2xl" align="items-center" />
+                            </div>
                         </div>
 
                         {/* Blurred Background Content (Teaser) */}

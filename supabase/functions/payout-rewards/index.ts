@@ -62,10 +62,10 @@ Deno.serve(async (req: Request) => {
             return jsonResponse({ success: false, error: 'Invalid wallet address' }, 400)
         }
 
-        // 4. Get player data including equipped_parts
+        // 4. Get player data - query core columns first
         const { data: player, error: playerError } = await supabase
             .from('player_data')
-            .select('last_claim_at, total_earned, equipped_parts')
+            .select('last_claim_at, total_earned, equipped_parts, pending_rewards, last_rewards_update')
             .eq('wallet_id', walletAddress)
             .single()
 
@@ -105,56 +105,40 @@ Deno.serve(async (req: Request) => {
             yieldMap[item.item_id] = item.yield_weight
         }
 
-        // 7. Calculate pending rewards from equipped_parts
-        let pendingRewards = 0
+        // 7. Get pending rewards from database (already calculated and saved by frontend)
+        // Also add any earnings since the last save
         const equippedParts = player.equipped_parts || {}
         const now = Date.now()
 
-        // Iterate through all cars and their equipped parts
+        // Calculate total points for any additional earnings since last update
+        let totalPoints = 0
         for (const carId of Object.keys(equippedParts)) {
             const carParts = equippedParts[carId]
             if (!carParts || typeof carParts !== 'object') continue
 
-            // Iterate through each slot (Engines, Turbos, etc.)
             for (const slot of Object.keys(carParts)) {
                 const part = carParts[slot]
                 if (!part) continue
 
-                // Get item ID (handle both { id: "..." } and "item_id" formats)
                 const itemId = typeof part === 'object' ? (part.id || part.item_id) : part
                 if (!itemId) continue
 
-                // Get yield weight for this item
                 const yieldWeight = yieldMap[itemId] || 0
-                if (yieldWeight === 0) continue
-
-                // Get equipped_at timestamp (or use a default if not present)
-                let equippedAt: number
-                if (typeof part === 'object' && part.equipped_at) {
-                    equippedAt = new Date(part.equipped_at).getTime()
-                } else if (player.last_claim_at) {
-                    // Fall back to last_claim_at if no equipped_at
-                    equippedAt = new Date(player.last_claim_at).getTime()
-                } else {
-                    // For first claim, assume equipped for 1 hour minimum
-                    equippedAt = now - (60 * 60 * 1000)
-                }
-
-                // Calculate hours since equipped (or since last claim, whichever is later)
-                const baseTime = player.last_claim_at
-                    ? Math.max(equippedAt, new Date(player.last_claim_at).getTime())
-                    : equippedAt
-                const hoursElapsed = Math.max(0, (now - baseTime) / (1000 * 60 * 60))
-
-                // Calculate earnings for this item
-                const itemEarnings = yieldWeight * SOL_PER_POINT_PER_HOUR * hoursElapsed
-                pendingRewards += itemEarnings
-
-                console.log(`[Payout] Item ${itemId}: ${yieldWeight} pts × ${hoursElapsed.toFixed(4)}h = ${itemEarnings.toFixed(6)} SOL`)
+                totalPoints += yieldWeight
             }
         }
 
-        console.log(`[Payout] Total pending rewards: ${pendingRewards.toFixed(6)} SOL`)
+        // Get database pending rewards + any new earnings since last update
+        let pendingRewards = parseFloat(player.pending_rewards) || 0
+
+        if (player.last_rewards_update && totalPoints > 0) {
+            const lastUpdate = new Date(player.last_rewards_update).getTime()
+            const hoursSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60)
+            const newEarnings = totalPoints * SOL_PER_POINT_PER_HOUR * hoursSinceUpdate
+            pendingRewards += newEarnings
+        }
+
+        console.log(`[Payout] DB pending: ${player.pending_rewards}, Final: ${pendingRewards.toFixed(6)} SOL`)
 
         // 8. Validate amount
         if (pendingRewards < MIN_CLAIM) {
@@ -198,13 +182,16 @@ Deno.serve(async (req: Request) => {
             return jsonResponse({ success: false, error: 'Treasury insufficient funds' }, 500)
         }
 
-        // 12. Update last_claim_at and total_earned BEFORE sending (optimistic lock)
+        // 12. Update last_claim_at, total_earned, and RESET pending_rewards
         const newTotalEarned = (parseFloat(player.total_earned) || 0) + amountToSend
+        const claimTime = new Date().toISOString()
         const { error: lockError } = await supabase
             .from('player_data')
             .update({
-                last_claim_at: new Date().toISOString(),
-                total_earned: newTotalEarned
+                last_claim_at: claimTime,
+                total_earned: newTotalEarned,
+                pending_rewards: 0,  // Reset pending rewards after claim
+                last_rewards_update: claimTime  // Reset update time
             })
             .eq('wallet_id', walletAddress)
 

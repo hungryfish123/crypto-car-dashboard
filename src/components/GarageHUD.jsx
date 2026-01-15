@@ -9,7 +9,7 @@ import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 import { useDynamicLinks } from '../hooks/useDynamicLinks';
 
-const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem, username = '' }) => {
+const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, totalEarned, hourlyRate, claimRewards, rewardsLoading, rewardsClaimError, rewardsClaimSuccess, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem, username = '' }) => {
     const { links } = useDynamicLinks();
     const { playHover } = useAudio();
 
@@ -89,6 +89,12 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
 
             <SolanaPanel
                 pendingRewards={pendingRewards}
+                totalEarned={totalEarned}
+                hourlyRate={hourlyRate}
+                claimRewards={claimRewards}
+                rewardsLoading={rewardsLoading}
+                rewardsClaimError={rewardsClaimError}
+                rewardsClaimSuccess={rewardsClaimSuccess}
                 hourlyEarnings={hourlyEarnings}
                 onRewardsClaimed={onRewardsClaimed}
                 currentCarModel={currentCarModel}
