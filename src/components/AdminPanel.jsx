@@ -756,7 +756,7 @@ const LinksManager = () => {
                 </div>
 
                 <div className="space-y-4">
-                    {links.map(link => (
+                    {links.filter(l => l.key !== 'logo_redirect').map(link => (
                         <div key={link.id} className="grid grid-cols-12 gap-4 items-center bg-black/40 p-4 rounded-lg border border-white/5">
                             <div className="col-span-3">
                                 <div className="text-xs text-gray-500 uppercase font-bold mb-1">Key</div>

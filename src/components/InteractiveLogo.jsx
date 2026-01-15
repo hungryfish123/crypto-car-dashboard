@@ -6,9 +6,7 @@ const InteractiveLogo = ({ height = "h-10", color = "#EF4444" }) => {
 
     return (
         <a
-            href={links.logo_redirect}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/"
             className="block cursor-pointer group relative"
         >
             {/* Invisible Image to maintain layout/aspect ratio */}
