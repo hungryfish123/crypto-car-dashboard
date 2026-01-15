@@ -126,13 +126,20 @@ const StatBar = ({ label, value, max, inverse = false }) => {
     const numValue = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
 
     // Calculate percentage
-    let percentage = (numValue / max) * 100;
+    let percentage;
 
     if (inverse) {
-        percentage = Math.max(0, Math.min(100, ((10 - numValue) / (10 - 2.5)) * 100));
+        // For acceleration: constant scale 0-15 seconds
+        // 15s = 0% (slowest), 0s = 100% (instant)
+        const maxSlow = 15; // 15 seconds = barely any bar
+        const minFast = 0;  // 0 seconds = full bar
+        percentage = Math.max(0, Math.min(100, ((maxSlow - numValue) / (maxSlow - minFast)) * 100));
     } else {
-        percentage = Math.max(0, Math.min(100, percentage));
+        percentage = Math.max(0, Math.min(100, (numValue / max) * 100));
     }
+
+    // Check if bar is full (100%)
+    const isFull = percentage >= 99;
 
     return (
         <div className="mb-4 last:mb-0">
@@ -145,9 +152,35 @@ const StatBar = ({ label, value, max, inverse = false }) => {
                     initial={{ width: 0 }}
                     animate={{ width: `${percentage}%` }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="h-full rounded-full bg-red-500"
-                />
+                    className={`h-full rounded-full relative ${isFull ? 'bg-red-500' : 'bg-red-500'}`}
+                    style={{
+                        background: isFull
+                            ? 'linear-gradient(90deg, #ef4444 0%, #ef4444 100%)'
+                            : '#ef4444'
+                    }}
+                >
+                    {/* Shimmer effect when bar is full */}
+                    {isFull && (
+                        <div
+                            className="absolute inset-0 rounded-full"
+                            style={{
+                                background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmer 1.5s linear infinite'
+                            }}
+                        />
+                    )}
+                </motion.div>
             </div>
+            {/* Inline keyframes for shimmer animation */}
+            {isFull && (
+                <style>{`
+                    @keyframes shimmer {
+                        0% { background-position: 200% 0; }
+                        100% { background-position: -200% 0; }
+                    }
+                `}</style>
+            )}
         </div>
     );
 };
@@ -240,6 +273,14 @@ const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, ca
         acceleration: 7
     };
 
+    // Get per-car max stats for progress bar scaling
+    const maxStats = currentCarModel?.maxStats || {
+        power: 600,
+        topSpeed: 350,
+        acceleration: 2.5,
+        weight: 2000
+    };
+
     // Apply bonuses to stats
     const applyBonus = (value, includeSpecial = true) => {
         const numVal = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
@@ -248,10 +289,14 @@ const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, ca
     };
 
     const stats = {
-        power: applyBonus(baseStats.power) + ' HP',
-        topSpeed: applyBonus(baseStats.topSpeed) + ' km/h',
-        acceleration: (parseFloat(String(baseStats.acceleration).replace(/[^0-9.]/g, '')) / ((100 + totalBonus) / 100)).toFixed(1) + 's',
-        weight: baseStats.weight
+        power: applyBonus(baseStats.power),
+        powerDisplay: applyBonus(baseStats.power) + ' HP',
+        topSpeed: applyBonus(baseStats.topSpeed),
+        topSpeedDisplay: applyBonus(baseStats.topSpeed) + ' km/h',
+        acceleration: parseFloat((baseStats.acceleration / ((100 + totalBonus) / 100)).toFixed(1)),
+        accelerationDisplay: (baseStats.acceleration / ((100 + totalBonus) / 100)).toFixed(1) + 's',
+        weight: baseStats.weight,
+        weightDisplay: baseStats.weight + ' kg'
     };
 
     // Total displayable Rewards (Live + any cached fees)
@@ -344,10 +389,10 @@ const SolanaPanel = ({ onRewardsClaimed, currentCarModel, equippedParts = {}, ca
                         <h3 className="text-base text-red-500 tracking-widest font-bold uppercase mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
                             STATS
                         </h3>
-                        <StatBar label="Power" value={stats.power} max={600} />
-                        <StatBar label="Top Speed" value={stats.topSpeed} max={350} />
-                        <StatBar label="Acceleration" value={stats.acceleration} max={10} inverse={true} />
-                        <StatBar label="Weight" value={stats.weight} max={2000} />
+                        <StatBar label="Power" value={stats.powerDisplay} max={maxStats.power} />
+                        <StatBar label="Top Speed" value={stats.topSpeedDisplay} max={maxStats.topSpeed} />
+                        <StatBar label="Acceleration" value={stats.accelerationDisplay} max={maxStats.acceleration} inverse={true} />
+                        <StatBar label="Weight" value={stats.weightDisplay} max={maxStats.weight} />
                     </div>
 
                 </div>

@@ -475,7 +475,7 @@ const CarCallouts = ({ equippedParts = {}, inventory = [], visible = true, carMo
 
                 return (
                     <Callout
-                        key={calloutName}
+                        key={`${calloutName}-${matchingItem?.id || 'empty'}`}
                         category={calloutName}
                         item={matchingItem}
                         attachPoint={config.attachPoint}

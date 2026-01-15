@@ -9,6 +9,77 @@ import { MARKETPLACE_ITEMS } from '../data/marketplaceItems';
 
 import { useDynamicLinks } from '../hooks/useDynamicLinks';
 
+// Individual Inventory Item Component - handles hover state for equipped/unequipped items
+const InventoryItem = ({ item, isEquipped, isBeingDragged, rarityLabel, setDraggedItem, playHover, getRarityBorder, getRarityStyles }) => {
+    const [isHovered, setIsHovered] = useState(false);
+
+    // Show overlay only when hovered AND not being dragged
+    const showOverlay = isHovered && !isBeingDragged;
+
+    return (
+        <div
+            draggable={!isEquipped}
+            onDragStart={(e) => {
+                if (isEquipped) { e.preventDefault(); return; }
+                if (setDraggedItem) setDraggedItem(item);
+                e.dataTransfer.setData('item', JSON.stringify(item));
+                e.dataTransfer.effectAllowed = 'move';
+                setIsHovered(false); // Clear hover when dragging starts
+            }}
+            onDragEnd={() => { if (setDraggedItem) setDraggedItem(null); }}
+            onMouseEnter={() => { if (!isBeingDragged) { playHover(); setIsHovered(true); } }}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 hover:scale-105 ${isBeingDragged ? 'opacity-40 border-dashed scale-95 grayscale' : ''} ${isEquipped ? 'cursor-default' : ''}`}
+        >
+            {/* Rarity Label (Top Right) */}
+            <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-white/20 shadow-md ${getRarityStyles(item.rarityLevel)} text-white z-10`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{rarityLabel}</div>
+
+            {/* Content Container */}
+            <div className="absolute inset-0 flex items-center justify-center p-6 pb-12 transition-all duration-200">
+                <img
+                    src={item.image?.startsWith('/') ? item.image : `/${item.image}`}
+                    alt={item.title}
+                    draggable="false"
+                    className="w-full h-full object-contain drop-shadow-md transition-transform duration-200 pointer-events-none"
+                    loading="lazy"
+                    onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }}
+                />
+            </div>
+
+            {/* Title Area */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 pb-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[40%] transition-all duration-200">
+                <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
+            </div>
+
+            {/* Hover Overlay - Shows on hover (not while dragging) */}
+            {showOverlay && (
+                <div
+                    className="absolute inset-0 flex items-center justify-center z-20 rounded-xl"
+                    style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        backdropFilter: 'blur(4px)',
+                        WebkitBackdropFilter: 'blur(4px)'
+                    }}
+                >
+                    <span
+                        className="text-white text-sm font-black uppercase tracking-wider text-center px-2"
+                        style={{
+                            fontFamily: 'Orbitron, sans-serif',
+                            textShadow: '0 2px 6px rgba(0,0,0,0.8)'
+                        }}
+                    >
+                        {isEquipped ? (
+                            <>ALREADY<br />EQUIPPED</>
+                        ) : (
+                            <>DRAG TO<br />EQUIP</>
+                        )}
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}, allEquippedParts = {}, equipItem, unequipItem, setDraggedItem, draggedItem, pendingRewards, totalEarned, hourlyRate, claimRewards, rewardsLoading, rewardsClaimError, rewardsClaimSuccess, hourlyEarnings, onRewardsClaimed, currentCarModel, onNavigateToItem, username = '' }) => {
     const { links } = useDynamicLinks();
     const { playHover } = useAudio();
@@ -169,31 +240,17 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                                     const isBeingDragged = draggedItem && draggedItem.id === item.id;
 
                                     return (
-                                        <div key={item.id} draggable={!isEquipped}
-                                            onDragStart={(e) => {
-                                                if (isEquipped) { e.preventDefault(); return; }
-                                                if (setDraggedItem) setDraggedItem(item);
-                                                e.dataTransfer.setData('item', JSON.stringify(item));
-                                                e.dataTransfer.effectAllowed = 'move';
-                                            }}
-                                            onDragEnd={() => { if (setDraggedItem) setDraggedItem(null); }}
-                                            onMouseEnter={playHover}
-                                            className={`aspect-square bg-white/5 border ${getRarityBorder(item.rarityLevel)} rounded-xl relative overflow-hidden cursor-grab active:cursor-grabbing transition-all duration-200 hover:scale-105 group ${isBeingDragged ? 'opacity-40 border-dashed scale-95 grayscale' : ''} ${isEquipped ? 'cursor-default' : ''}`}>
-
-                                            {/* Rarity Label (Top Right) */}
-                                            <div className={`absolute top-2 right-2 px-2 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-white/20 shadow-md ${getRarityStyles(item.rarityLevel)} text-white z-10`} style={{ fontFamily: 'Orbitron, sans-serif' }}>{rarityLabel}</div>
-
-                                            {/* Minimal Remove Icon (Top Left) - REMOVED */}
-
-                                            <div className="absolute inset-0 flex items-center justify-center p-6 pb-12">
-                                                <img src={item.image?.startsWith('/') ? item.image : `/${item.image}`} alt={item.title} draggable="false" className={`w-full h-full object-contain drop-shadow-md transition-transform duration-200 pointer-events-none ${isEquipped ? '' : 'group-hover:scale-110'}`} loading="lazy" onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23333" width="100" height="100"/><text fill="%23666" font-size="12" x="50" y="55" text-anchor="middle">No Image</text></svg>'; }} />
-                                            </div>
-
-                                            <div className="absolute bottom-0 left-0 right-0 p-3 pb-4 bg-gradient-to-t from-black/90 via-black/60 to-transparent flex flex-col items-center justify-end h-[40%]">
-                                                <h4 className="text-white text-sm font-bold uppercase text-center truncate w-full leading-tight" style={{ fontFamily: 'Orbitron, sans-serif' }}>{item.title}</h4>
-                                                {/* Yield display removed as per user request */}
-                                            </div>
-                                        </div>
+                                        <InventoryItem
+                                            key={item.id}
+                                            item={item}
+                                            isEquipped={isEquipped}
+                                            isBeingDragged={isBeingDragged}
+                                            rarityLabel={rarityLabel}
+                                            setDraggedItem={setDraggedItem}
+                                            playHover={playHover}
+                                            getRarityBorder={getRarityBorder}
+                                            getRarityStyles={getRarityStyles}
+                                        />
                                     );
                                 })}
                             </div>
@@ -204,7 +261,7 @@ const GarageHUD = ({ carColor, setActivePage, inventory = [], equippedParts = {}
                     <div className="absolute bottom-0 left-0 w-full p-4 bg-gradient-to-t from-black via-black/90 to-transparent pt-12 pointer-events-none flex justify-center z-30">
                         <button
                             onClick={() => setActivePage('Marketplace')}
-                            className="w-full py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-lg transition-all shadow-lg hover:shadow-red-900/50 pointer-events-auto"
+                            className="w-full py-3 bg-red-600 hover:bg-red-500 text-white text-sm font-bold uppercase tracking-wider rounded-lg transition-all pointer-events-auto"
                             style={{ fontFamily: 'Orbitron, sans-serif' }}
                         >
                             Visit Marketplace

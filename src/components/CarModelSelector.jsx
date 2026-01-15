@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Lock, Car, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { unlockCar } from '../dbServices'; // Import the new unlock service
 
-// Define Car Models Configuration
+// Define Car Models Configuration with real stats
 export const CAR_MODELS = [
     {
         id: 'bmw_m3_e30',
@@ -11,13 +11,27 @@ export const CAR_MODELS = [
         year: '1986',
         description: 'The legend that started it all. Required for entry.',
         price: 'Owned',
-        hp: '200 HP',
+        hp: '197 HP',
         accel: '6.7s',
         topSpeed: '235 km/h',
         model: '/bmw_m3_coupe_e30_1986.glb',
-        meshName: 'paint_M3', // For color changing
+        meshName: 'paint_M3',
         targetNames: ['Object_2', 'Object_20', 'Object_21', 'Object_22', 'Object_23'],
-        isDefault: true
+        isDefault: true,
+        // Base stats for calculations
+        stats: {
+            power: 197,
+            topSpeed: 235,
+            acceleration: 6.7,
+            weight: 1165
+        },
+        // Max possible stats (with all upgrades) for progress bar scaling
+        maxStats: {
+            power: 400,
+            topSpeed: 350,
+            acceleration: 3.5,
+            weight: 1300
+        }
     },
     {
         id: 'vw_golf_gti_mk2',
@@ -25,13 +39,25 @@ export const CAR_MODELS = [
         year: '1992',
         description: 'The hot hatch benchmark. Practical speed.',
         price: '10 Tokens',
-        hp: '139 HP',
-        accel: '8.3s',
-        topSpeed: '208 km/h',
+        hp: '110 HP',
+        accel: '9.7s',
+        topSpeed: '191 km/h',
         model: '/1992_volkswagen_golf_gti_mk2.glb',
         meshName: 'paint_golf',
         targetNames: ['car_volkswagen_golfgtimk2_1992_MeshM_Paint_Metal_High_carpaint_0'],
-        locked: true
+        locked: true,
+        stats: {
+            power: 110,
+            topSpeed: 191,
+            acceleration: 9.7,
+            weight: 920
+        },
+        maxStats: {
+            power: 300,
+            topSpeed: 300,
+            acceleration: 5.0,
+            weight: 1100
+        }
     },
     {
         id: 'audi_sport_quattro',
@@ -39,13 +65,25 @@ export const CAR_MODELS = [
         year: '1984',
         description: 'Rally legend. Pure grip and acceleration.',
         price: '10 Tokens',
-        hp: '306 HP',
+        hp: '302 HP',
         accel: '4.8s',
         topSpeed: '250 km/h',
         model: '/1984_audi_sport_quattro.glb',
         meshName: 'paint_audi',
         targetNames: ['AudiMAT_Audi_S1_Red_Base1'],
-        locked: true
+        locked: true,
+        stats: {
+            power: 302,
+            topSpeed: 250,
+            acceleration: 4.8,
+            weight: 1300
+        },
+        maxStats: {
+            power: 550,
+            topSpeed: 400,
+            acceleration: 3.0,
+            weight: 1450
+        }
     },
     {
         id: 'mazda_mx5_na',
@@ -54,12 +92,24 @@ export const CAR_MODELS = [
         description: 'Pure driving joy. Lightweight roadster.',
         price: '10 Tokens',
         hp: '116 HP',
-        accel: '8.1s',
+        accel: '8.8s',
         topSpeed: '203 km/h',
         model: '/1989_mazda_mx-5.glb',
         meshName: 'paint_mazda',
         targetNames: ['Vehicle_Exterior_mm_ext'],
-        locked: true
+        locked: true,
+        stats: {
+            power: 116,
+            topSpeed: 203,
+            acceleration: 8.8,
+            weight: 960
+        },
+        maxStats: {
+            power: 300,
+            topSpeed: 320,
+            acceleration: 4.5,
+            weight: 1100
+        }
     },
     {
         id: 'ferrari_f40',
@@ -67,13 +117,25 @@ export const CAR_MODELS = [
         year: '1987',
         description: 'The last Ferrari approved by Enzo. No aids.',
         price: '20 Tokens',
-        hp: '478 HP',
+        hp: '471 HP',
         accel: '4.1s',
         topSpeed: '324 km/h',
         model: '/1987_ferrari_f40.glb',
         meshName: 'paint_f40',
-        targetNames: [], // User will provide mesh name
-        locked: true
+        targetNames: [],
+        locked: true,
+        stats: {
+            power: 471,
+            topSpeed: 324,
+            acceleration: 4.1,
+            weight: 1100
+        },
+        maxStats: {
+            power: 750,
+            topSpeed: 450,
+            acceleration: 2.5,
+            weight: 1250
+        }
     },
     {
         id: 'lamborghini_huracan_2015',
@@ -81,13 +143,25 @@ export const CAR_MODELS = [
         year: '2015',
         description: 'V10 bull. Precision and raw power.',
         price: '20 Tokens',
-        hp: '610 HP',
+        hp: '602 HP',
         accel: '3.2s',
         topSpeed: '325 km/h',
         model: '/2015_lamborghini_huracan_lpi-610-4.glb',
         meshName: 'Vehicle_Exterior_mm_ext',
         targetNames: ['Vehicle_Exterior_mm_ext'],
-        locked: true
+        locked: true,
+        stats: {
+            power: 602,
+            topSpeed: 325,
+            acceleration: 3.2,
+            weight: 1422
+        },
+        maxStats: {
+            power: 900,
+            topSpeed: 500,
+            acceleration: 2.0,
+            weight: 1550
+        }
     }
 ];
 

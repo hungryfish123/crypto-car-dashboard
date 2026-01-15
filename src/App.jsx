@@ -444,37 +444,15 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
 
   }, [scene, isOwned, effectiveTargetNames, specialEffect]);
 
-  // Flash Effect logic - triggered by counter change
-  // Flash Effect logic - triggered by counter change (Standard flash)
+  // Flash Effect logic - DISABLED (was causing glitches)
+  // Previously triggered white glow when equipping items
+  // Now just applies car style without any flash
   useEffect(() => {
-    // Only flash if we are NOT in the middle of a reveal animation
-    if (triggerFlash > 0 && scene && revealState.current === 'idle') {
-      scaleRef.current = 1.1; // Bounce animation
-
-      // 1. FLASH ON: Set all materials to white glow
-      scene.traverse((child) => {
-        if (child.isMesh && child.material && child.material.emissive) {
-          child.material.emissive.setHex(0xffffff);
-          child.material.emissiveIntensity = 2.0;
-        }
-      });
-
-      // 2. FLASH OFF: Revert after 150ms and reapply car style
-      const timer = setTimeout(() => {
-        scene.traverse((child) => {
-          if (child.isMesh && child.material && child.material.emissive) {
-            // Reset emissive to black (no glow)
-            child.material.emissive.setHex(0x000000);
-            child.material.emissiveIntensity = 0;
-          }
-        });
-        // Reapply car color/finish after flash ends
-        applyCarStyle(carColor, carFinish);
-      }, 150);
-
-      return () => clearTimeout(timer);
+    if (triggerFlash > 0 && scene) {
+      // Just apply car style without flash animation
+      applyCarStyle(carColor, carFinish);
     }
-  }, [triggerFlash]); // Only depend on triggerFlash counter
+  }, [triggerFlash]);
 
 
   // Initial Setup: Shadows & Positioning, and store original materials
@@ -573,66 +551,10 @@ const CarModel = ({ rotationSpeed, triggerFlash, carColor, carFinish, activePage
       // Keep Y position stable
       meshRef.current.position.y = 0;
 
-      // Handle Burn Reveal Animation
-      if (revealState.current === 'heating') {
-        const speed = 2.0;
-        glowIntensity.current = THREE.MathUtils.lerp(glowIntensity.current, 8.0, delta * speed); // Heat up to 8.0 intensity
-
-        // Apply heat to silhouette
-        scene.traverse(child => {
-          if (child.isMesh && child.material && child.material.emissive) {
-            child.material.emissive.setHex(0xffffff);
-            child.material.emissiveIntensity = glowIntensity.current;
-            // Also make it fully opaque
-            if (child.material.opacity !== undefined) child.material.opacity = 1;
-          }
-        });
-
-        // Trigger switch when hot enough (close to 8.0)
-        if (glowIntensity.current > 7.0) {
-          revealState.current = 'cooling';
-          restoreOriginalMaterials();
-          applyCarStyle(carColor, carFinish); // Ensure correct color is applied to restored mats
-
-          // Set initial glow for cooling phase (start hot)
-          glowIntensity.current = 5.0;
-
-          // FORCE overwrite emissive immediately to prevent 1-frame dark flicker
-          scene.traverse(child => {
-            if (child.isMesh && child.material && child.material.emissive) {
-              child.material.emissive.setHex(0xffffff);
-              child.material.emissiveIntensity = glowIntensity.current;
-            }
-          });
-
-          scaleRef.current = 1.15; // Bounce effect
-        }
-
-      } else if (revealState.current === 'cooling') {
-        const coolSpeed = 1.0;
-        glowIntensity.current = THREE.MathUtils.lerp(glowIntensity.current, 0, delta * coolSpeed);
-
-        // Apply glow to restored materials
-        scene.traverse(child => {
-          if (child.isMesh && child.material && child.material.emissive) {
-            child.material.emissive.setHex(0xffffff);
-            child.material.emissiveIntensity = glowIntensity.current;
-          }
-        });
-
-        // End animation
-        if (glowIntensity.current < 0.05) {
-          revealState.current = 'idle';
-          glowIntensity.current = 0;
-          // Final cleanup to ensure no lingering glow
-          scene.traverse(child => {
-            if (child.isMesh && child.material && child.material.emissive) {
-              child.material.emissiveIntensity = 0;
-              child.material.emissive.setHex(0x000000);
-            }
-          });
-        }
-      }
+      // Handle Burn Reveal Animation - DISABLED (was causing loading glitches)
+      // Previously had 'heating' and 'cooling' phases with white glow
+      // Now the reveal state is always 'idle' and car appears immediately
+      // (keeping the code path but skipping all glow logic)
 
     }
   });

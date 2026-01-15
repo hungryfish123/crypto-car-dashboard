@@ -6,7 +6,7 @@ import { Loader2, ExternalLink } from 'lucide-react';
  * ClaimPopup Component
  * 
  * Glassmorphism toast notification - clean white Orbitron text
- * Slides in from top, no colors/glow/outline
+ * Centered on screen, fades out after a few seconds
  */
 const ClaimPopup = ({
     isLoading = false,
@@ -16,12 +16,12 @@ const ClaimPopup = ({
 }) => {
     const isVisible = isLoading || success || error;
 
-    // Auto-close success/error after 8 seconds
+    // Auto-close success/error after 5 seconds
     React.useEffect(() => {
         if (success || error) {
             const timer = setTimeout(() => {
                 if (onClose) onClose();
-            }, 8000);
+            }, 5000);
             return () => clearTimeout(timer);
         }
     }, [success, error, onClose]);
@@ -41,19 +41,20 @@ const ClaimPopup = ({
         <AnimatePresence>
             {isVisible && (
                 <motion.div
-                    initial={{ opacity: 0, y: -50 }}
+                    initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -30 }}
+                    exit={{ opacity: 0, y: -20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[9998]"
+                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[9998]"
                 >
-                    {/* Glassmorphism container - no outline, no glow */}
+                    {/* Glassmorphism container - less rounded to match buttons */}
                     <div
-                        className="px-6 py-4 rounded-2xl cursor-pointer"
+                        className="px-6 py-4 rounded-lg cursor-pointer pointer-events-auto"
                         style={{
-                            background: 'rgba(255, 255, 255, 0.1)',
+                            background: 'rgba(0, 0, 0, 0.8)',
                             backdropFilter: 'blur(20px)',
                             WebkitBackdropFilter: 'blur(20px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)'
                         }}
                         onClick={success ? openSolscan : onClose}
                     >
@@ -114,3 +115,4 @@ const ClaimPopup = ({
 };
 
 export default ClaimPopup;
+
