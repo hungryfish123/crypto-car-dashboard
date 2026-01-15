@@ -22,12 +22,27 @@ import UsernameModal from './components/UsernameModal';
 import { Loader2 } from 'lucide-react'; // Import Loader icon
 import RaceCountdown from './components/RaceCountdown'; // Race Countdown Timer
 
-// Lazy Load Heavy Components
-const Marketplace = React.lazy(() => import('./components/Marketplace'));
-const PaintShop = React.lazy(() => import('./components/PaintShop'));
-const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
-const Leaderboard = React.lazy(() => import('./components/Leaderboard'));
-const ProfilePage = React.lazy(() => import('./components/ProfilePage'));
+// Helper to reload page on chunk load error (deployment update)
+const lazyRetry = (importFn) => React.lazy(async () => {
+  try {
+    const module = await importFn();
+    sessionStorage.removeItem('retry-lazy-refreshed');
+    return module;
+  } catch (error) {
+    if (!sessionStorage.getItem('retry-lazy-refreshed')) {
+      sessionStorage.setItem('retry-lazy-refreshed', 'true');
+      window.location.reload();
+    }
+    throw error;
+  }
+});
+
+// Lazy Load Heavy Components with Retry
+const Marketplace = lazyRetry(() => import('./components/Marketplace'));
+const PaintShop = lazyRetry(() => import('./components/PaintShop'));
+const AdminPanel = lazyRetry(() => import('./components/AdminPanel'));
+const Leaderboard = lazyRetry(() => import('./components/Leaderboard'));
+const ProfilePage = lazyRetry(() => import('./components/ProfilePage'));
 
 // Loading Fallback Component
 const PageLoader = () => (
