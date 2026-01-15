@@ -131,10 +131,14 @@ const ProductDetails = ({ data, rawItem, addToInventory, onClose }) => {
     const handlePurchase = () => {
         if (isConfirmed) return; // Prevent double-click
 
+        console.log('[BuyButton] rawItem:', rawItem);
+        console.log('[BuyButton] buyUrl:', rawItem.buyUrl);
+
         if (rawItem.buyUrl) {
             window.open(rawItem.buyUrl, '_blank');
         } else {
             // Fallback for items without a link
+            console.warn('[BuyButton] No buyUrl found for item:', rawItem.id);
             setIsConfirmed(true);
             setTimeout(() => {
                 if (addToInventory) {

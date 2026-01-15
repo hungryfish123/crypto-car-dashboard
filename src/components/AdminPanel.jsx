@@ -61,6 +61,9 @@ const AdminPanel = ({ onClose, items }) => {
         }
     };
 
+    // Wrapped SOL mint address for Jupiter swap links
+    const WSOL_MINT = 'So11111111111111111111111111111111111111112';
+
     const fetchMappings = async () => {
         setLoading(true);
         const { data, error } = await supabase
@@ -74,10 +77,16 @@ const AdminPanel = ({ onClose, items }) => {
             const details = {};
             const hidden = {};
             data.forEach(row => {
-                details[row.item_id] = {
-                    ca: row.contract_address || '',
-                    buyUrl: row.buy_url || ''
-                };
+                const ca = row.contract_address || '';
+                let buyUrl = row.buy_url || '';
+                const supply = row.supply || 0;
+
+                // Auto-generate Jupiter URL if CA exists but buyUrl is empty
+                if (ca && !buyUrl) {
+                    buyUrl = `https://jup.ag/?sell=${WSOL_MINT}&buy=${ca}`;
+                }
+
+                details[row.item_id] = { ca, buyUrl, supply };
                 hidden[row.item_id] = row.hidden || false;
             });
             setItemDetails(details);
@@ -114,13 +123,17 @@ const AdminPanel = ({ onClose, items }) => {
     };
 
     const updateField = (itemId, field, value) => {
-        setItemDetails(prev => ({
-            ...prev,
-            [itemId]: {
-                ...(prev[itemId] || { ca: '', buyUrl: '' }),
-                [field]: value
+        setItemDetails(prev => {
+            const current = prev[itemId] || { ca: '', buyUrl: '' };
+            const updated = { ...current, [field]: value };
+
+            // Auto-generate Jupiter buy link when CA is entered/updated
+            if (field === 'ca' && value && value.trim().length > 0) {
+                updated.buyUrl = `https://jup.ag/?sell=${WSOL_MINT}&buy=${value.trim()}`;
             }
-        }));
+
+            return { ...prev, [itemId]: updated };
+        });
     };
 
     const toggleHidden = async (itemId) => {
@@ -301,13 +314,14 @@ const AdminPanel = ({ onClose, items }) => {
                             <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] items-center uppercase text-gray-500 font-bold tracking-wider">
                                 <div className="col-span-1">Preview</div>
                                 <div className="col-span-2">Item Info</div>
-                                <div className="col-span-4">Contract Address</div>
+                                <div className="col-span-1">Supply</div>
+                                <div className="col-span-3">Contract Address</div>
                                 <div className="col-span-4">Buy Link</div>
                                 <div className="col-span-1 text-right">Actions</div>
                             </div>
 
                             {items.map(item => {
-                                const details = itemDetails[item.id] || { ca: '', buyUrl: '' };
+                                const details = itemDetails[item.id] || { ca: '', buyUrl: '', supply: 0 };
                                 const isHidden = hiddenItems[item.id];
 
                                 return (
@@ -327,8 +341,15 @@ const AdminPanel = ({ onClose, items }) => {
                                             {isHidden && <span className="text-[9px] text-yellow-500 uppercase mt-1">Hidden</span>}
                                         </div>
 
-                                        {/* 3. CA */}
-                                        <div className="col-span-4">
+                                        {/* 3. Supply */}
+                                        <div className="col-span-1 flex items-center justify-center">
+                                            <span className="text-xs font-mono text-cyan-400 font-bold">
+                                                {details.supply ? details.supply.toLocaleString() : '—'}
+                                            </span>
+                                        </div>
+
+                                        {/* 4. CA */}
+                                        <div className="col-span-3">
                                             <div className="relative">
                                                 <Database size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-600" />
                                                 <input

@@ -45,7 +45,7 @@ const ClaimPopup = ({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[9998]"
+                    className="fixed top-4 left-1/2 -translate-x-1/2 z-[9998]"
                 >
                     {/* Glassmorphism container - less rounded to match buttons */}
                     <div

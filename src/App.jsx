@@ -682,18 +682,29 @@ function App() {
   const [isModelTransitioning, setIsModelTransitioning] = useState(false);
   const [transitionDirection, setTransitionDirection] = useState(1); // 1 = Next, -1 = Prev
 
-  // Owned cars - Load from localStorage for instant display, then verify with Supabase
-  const [ownedCars, setOwnedCarsState] = useState(() => {
-    try {
-      const cached = localStorage.getItem('cached_owned_cars');
-      return cached ? JSON.parse(cached) : ['bmw_m3_e30'];
-    } catch { return ['bmw_m3_e30']; }
-  });
+  // Owned cars - Start with default only. DB/user_unlocks will populate correctly.
+  // IMPORTANT: Don't trust localStorage for this - it can persist stale data across wallet changes
+  const [ownedCars, setOwnedCarsState] = useState(['bmw_m3_e30']);
+  const previousWalletRef = useRef(null);
 
-  // Wrapper setter that also caches to localStorage
+  // Reset ownedCars when wallet changes (prevents cross-user contamination)
+  useEffect(() => {
+    const currentWallet = user?.wallet?.address;
+
+    // If wallet changed (including initial login), reset to default and clear localStorage cache
+    if (currentWallet && previousWalletRef.current !== currentWallet) {
+      console.log('[App] Wallet changed, resetting ownedCars to default');
+      setOwnedCarsState(['bmw_m3_e30']);
+      try { localStorage.removeItem('cached_owned_cars'); } catch { }
+      previousWalletRef.current = currentWallet;
+    }
+  }, [user?.wallet?.address]);
+
+  // Wrapper setter that also caches to localStorage (for current session only)
   const setOwnedCars = (newValue) => {
     const value = typeof newValue === 'function' ? newValue(ownedCars) : newValue;
     setOwnedCarsState(value);
+    // Cache to localStorage for this session (will be reset on wallet change)
     try { localStorage.setItem('cached_owned_cars', JSON.stringify(value)); } catch { }
   };
 
