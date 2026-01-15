@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Check, AlertCircle } from 'lucide-react';
-import { createProfile } from '../dbServices';
+import { createProfile, checkUsernameAvailability } from '../dbServices';
 
 const UsernameModal = ({ walletAddress, onComplete }) => {
     const [username, setUsername] = useState('');
@@ -24,6 +24,14 @@ const UsernameModal = ({ walletAddress, onComplete }) => {
 
         setLoading(true);
         try {
+            // Check availability first
+            const available = await checkUsernameAvailability(trimmed);
+            if (!available) {
+                setError('Username already in use. Please choose another one.');
+                setLoading(false);
+                return;
+            }
+
             await createProfile(walletAddress, trimmed);
             onComplete(trimmed); // Pass username to App for state update
         } catch (err) {

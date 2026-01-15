@@ -197,6 +197,26 @@ export const getProfile = async (walletAddress) => {
     }
 };
 
+// Check if username is already taken
+export const checkUsernameAvailability = async (username) => {
+    if (!isSupabaseConfigured || !supabase) return true;
+    try {
+        const { count, error } = await supabase
+            .from('player_data')
+            .select('*', { count: 'exact', head: true })
+            .ilike('username', username.trim());
+
+        if (error) {
+            console.error('Error checking username:', error);
+            return false; // Assume taken on error to be safe
+        }
+        return count === 0;
+    } catch (err) {
+        console.error('Unexpected error checking username:', err);
+        return false;
+    }
+};
+
 export const createProfile = async (walletAddress, username) => {
     if (!isSupabaseConfigured || !supabase) return null;
     try {
