@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, CheckCircle, Lock, Globe } from 'lucide-react';
+import { Check, CheckCircle, Upload, Palette, Sticker } from 'lucide-react';
 import { useAudio } from '../hooks/useAudio';
+import GarageCountdown from './GarageCountdown';
 
 import { useDynamicLinks } from '../hooks/useDynamicLinks';
 
@@ -328,53 +329,54 @@ export default function PaintShop({
     `;
 
     return (
-        <motion.div
-            initial={{ x: -400, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed left-8 top-24 w-80 max-h-[85vh] h-fit bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex flex-col shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5"
-        >
-            {/* Header */}
-            <div className="p-6 pb-2">
-                <h1 className="text-xl font-bold text-red-500 uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                    Paint Shop
-                </h1>
-            </div>
+        <>
+            <motion.div
+                initial={{ x: -400, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="fixed left-8 top-24 w-80 h-[80vh] bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex flex-col shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5"
+            >
+                {/* Header */}
+                <div className="p-6 pb-2">
+                    <h1 className="text-xl font-bold text-red-500 uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        Paint Shop
+                    </h1>
+                </div>
 
-            {/* Content & Footer Combined for Compactness */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                {/* Content & Footer Combined for Compactness */}
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
-                {/* 1. Base Color */}
-                <div>
-                    <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        Base Color
-                    </h3>
+                    {/* 1. Base Color */}
+                    <div>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Base Color
+                        </h3>
 
-                    {/* Presets - 2 Rows of 4 */}
-                    <div className="grid grid-cols-4 gap-3 mb-5">
-                        {predefinedColors.map((color) => (
-                            <button
-                                key={color}
-                                onClick={() => handlePresetClick(color)}
-                                className={`aspect-square rounded-full transition-all duration-300 relative overflow-hidden group flex items-center justify-center ${previewColor.toUpperCase() === color.toUpperCase() && !specialEffect
-                                    ? 'scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50'
-                                    : 'border border-white/10 hover:border-white/30 hover:scale-105'
-                                    }`}
-                                style={{ backgroundColor: color }}
-                                title={color}
-                            >
-                                {previewColor.toUpperCase() === color.toUpperCase() && !specialEffect && (
-                                    <div className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center w-full h-full">
-                                        <Check size={20} className="text-white filter drop-shadow-md" strokeWidth={4} />
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
+                        {/* Presets - 2 Rows of 4 */}
+                        <div className="grid grid-cols-4 gap-3 mb-5">
+                            {predefinedColors.map((color) => (
+                                <button
+                                    key={color}
+                                    onClick={() => handlePresetClick(color)}
+                                    className={`aspect-square rounded-full transition-all duration-300 relative overflow-hidden group flex items-center justify-center ${previewColor.toUpperCase() === color.toUpperCase() && !specialEffect
+                                        ? 'scale-110 shadow-[0_0_15px_rgba(255,255,255,0.3)] ring-1 ring-white/50'
+                                        : 'border border-white/10 hover:border-white/30 hover:scale-105'
+                                        }`}
+                                    style={{ backgroundColor: color }}
+                                    title={color}
+                                >
+                                    {previewColor.toUpperCase() === color.toUpperCase() && !specialEffect && (
+                                        <div className="relative z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] flex items-center justify-center w-full h-full">
+                                            <Check size={20} className="text-white filter drop-shadow-md" strokeWidth={4} />
+                                        </div>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
 
-                    {/* HSL Sliders */}
-                    <div className={`space-y-4 transition-opacity duration-300 ${specialEffect ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                        <style>{`
+                        {/* HSL Sliders */}
+                        <div className={`space-y-4 transition-opacity duration-300 ${specialEffect ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                            <style>{`
                             .custom-slider::-webkit-slider-thumb { 
                                 background-color: ${previewColor} !important; 
                                 border: none !important; 
@@ -387,168 +389,291 @@ export default function PaintShop({
                             }
                         `}</style>
 
-                        {/* Hue */}
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hue</span>
+                            {/* Hue */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Hue</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0" max="360"
+                                    value={hue}
+                                    onChange={(e) => { hasUserInteracted.current = true; setHue(parseInt(e.target.value)); }}
+                                    className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
+                                />
                             </div>
-                            <input
-                                type="range"
-                                min="0" max="360"
-                                value={hue}
-                                onChange={(e) => { hasUserInteracted.current = true; setHue(parseInt(e.target.value)); }}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
-                            />
-                        </div>
 
-                        {/* Saturation */}
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Saturation</span>
+                            {/* Saturation */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Saturation</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0" max="100"
+                                    value={saturation}
+                                    onChange={(e) => { hasUserInteracted.current = true; setSaturation(parseInt(e.target.value)); }}
+                                    className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
+                                />
                             </div>
-                            <input
-                                type="range"
-                                min="0" max="100"
-                                value={saturation}
-                                onChange={(e) => { hasUserInteracted.current = true; setSaturation(parseInt(e.target.value)); }}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
-                            />
-                        </div>
 
-                        {/* Lightness */}
-                        <div>
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Lightness</span>
+                            {/* Lightness */}
+                            <div>
+                                <div className="flex justify-between items-center mb-1">
+                                    <span className="text-[11px] text-white uppercase tracking-widest font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>Lightness</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0" max="90"
+                                    value={lightness}
+                                    onChange={(e) => { hasUserInteracted.current = true; setLightness(parseInt(e.target.value)); }}
+                                    className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
+                                />
                             </div>
-                            <input
-                                type="range"
-                                min="0" max="90"
-                                value={lightness}
-                                onChange={(e) => { hasUserInteracted.current = true; setLightness(parseInt(e.target.value)); }}
-                                className={`w-full h-1 rounded-full appearance-none cursor-pointer bg-neutral-800 custom-slider ${sliderThumbStyle}`}
-                            />
                         </div>
                     </div>
-                </div>
 
-                {/* Divider */}
-                <div className="h-px w-full bg-red-500/30" />
+                    {/* Divider */}
+                    <div className="h-px w-full bg-red-500/30" />
 
-                {/* 2. Finish */}
-                <div className={`${specialEffect && specialEffect !== 'rainbow' ? 'opacity-30 pointer-events-none' : 'opacity-100'} transition-opacity`}>
-                    <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                        Finish
-                    </h3>
-
-                    {/* Standard Finishes */}
-                    <div className="flex gap-2 mb-3">
-                        {finishOptions.map((finish) => (
-                            <button
-                                key={finish.id}
-                                onClick={() => handleFinishClick(finish.id)}
-                                className={`flex-1 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${previewFinish === finish.id
-                                    ? 'bg-red-600 border-red-600 text-white'
-                                    : 'bg-transparent border-red-500/30 text-gray-400 hover:text-white hover:border-red-500'
-                                    }`}
-                                style={{ fontFamily: 'Orbitron, sans-serif' }}
-                            >
-                                {finish.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* 2. Special Effects Section - Styled to stand out */}
-                <div className="bg-red-500/5 -mx-6 px-6 py-6 border-y border-white/5">
-                    <div className="mb-4">
-                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                            Special Effects
+                    {/* 2. Finish */}
+                    <div className={`${specialEffect && specialEffect !== 'rainbow' ? 'opacity-30 pointer-events-none' : 'opacity-100'} transition-opacity`}>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Finish
                         </h3>
+
+                        {/* Standard Finishes */}
+                        <div className="flex gap-2 mb-3">
+                            {finishOptions.map((finish) => (
+                                <button
+                                    key={finish.id}
+                                    onClick={() => handleFinishClick(finish.id)}
+                                    className={`flex-1 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all border ${previewFinish === finish.id
+                                        ? 'bg-red-600 border-red-600 text-white'
+                                        : 'bg-transparent border-red-500/30 text-gray-400 hover:text-white hover:border-red-500'
+                                        }`}
+                                    style={{ fontFamily: 'Orbitron, sans-serif' }}
+                                >
+                                    {finish.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Rainbow Rush Button with Overlay */}
-                    <button
-                        onClick={handleRainbowClick}
-                        disabled={rainbowState === 'verifying'}
-                        className={`w-full h-11 rounded-lg relative overflow-hidden group border transition-all ${specialEffect === 'rainbow'
-                            ? 'border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] scale-[1.02]'
-                            : 'border-white/10 hover:border-white/30 hover:scale-[1.01]'
-                            }`}
-                    >
-                        {/* Rainbow Background */}
-                        <div className="absolute inset-0 opacity-50" style={{ background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+                    {/* 2. Special Effects Section - Styled to stand out */}
+                    <div className="bg-red-500/5 -mx-6 px-6 py-6 border-y border-white/5">
+                        <div className="mb-4">
+                            <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                Special Effects
+                            </h3>
+                        </div>
 
-                        {/* Content based on State */}
-                        <div className={`absolute inset-0 flex items-center justify-center gap-2 transition-colors ${rainbowState === 'verified' && specialEffect !== 'rainbow'
-                            ? 'bg-transparent hover:bg-black/20'
-                            : 'bg-black/60'
-                            }`}>
-                            {rainbowState === 'idle' && (
-                                <>
-                                    <span className="text-white font-bold text-xs uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>𝕏</span>
-                                    <span className="text-[9px] font-bold text-white uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                        Follow to unlock
+                        {/* Rainbow Rush Button with Overlay */}
+                        <button
+                            onClick={handleRainbowClick}
+                            disabled={rainbowState === 'verifying'}
+                            className={`w-full h-11 rounded-lg relative overflow-hidden group border transition-all ${specialEffect === 'rainbow'
+                                ? 'border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] scale-[1.02]'
+                                : 'border-white/10 hover:border-white/30 hover:scale-[1.01]'
+                                }`}
+                        >
+                            {/* Rainbow Background */}
+                            <div className="absolute inset-0 opacity-50" style={{ background: 'linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)' }} />
+
+                            {/* Content based on State */}
+                            <div className={`absolute inset-0 flex items-center justify-center gap-2 transition-colors ${rainbowState === 'verified' && specialEffect !== 'rainbow'
+                                ? 'bg-transparent hover:bg-black/20'
+                                : 'bg-black/60'
+                                }`}>
+                                {rainbowState === 'idle' && (
+                                    <>
+                                        <span className="text-white font-bold text-xs uppercase" style={{ fontFamily: 'Orbitron, sans-serif' }}>𝕏</span>
+                                        <span className="text-[9px] font-bold text-white uppercase tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                            Follow to unlock
+                                        </span>
+                                    </>
+                                )}
+
+                                {rainbowState === 'verifying' && (
+                                    <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider animate-pulse" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                        Verifying...
                                     </span>
-                                </>
-                            )}
+                                )}
 
-                            {rainbowState === 'verifying' && (
-                                <span className="text-[10px] font-bold text-yellow-400 uppercase tracking-wider animate-pulse" style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                    Verifying...
-                                </span>
-                            )}
+                                {rainbowState === 'verified' && (
+                                    <span className={`text-xs font-bold uppercase tracking-widest ${specialEffect === 'rainbow' ? 'text-white drop-shadow-md' : 'text-white/90'
+                                        }`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                                        Rainbow Rush
+                                    </span>
+                                )}
+                            </div>
+                        </button>
+                    </div>
 
-                            {rainbowState === 'verified' && (
-                                <span className={`text-xs font-bold uppercase tracking-widest ${specialEffect === 'rainbow' ? 'text-white drop-shadow-md' : 'text-white/90'
-                                    }`} style={{ fontFamily: 'Orbitron, sans-serif' }}>
-                                    Rainbow Rush
-                                </span>
-                            )}
-                        </div>
-                    </button>
-                </div>
-
-                {/* Footer - Compact & Inline */}
-                <div className="pt-2 space-y-3">
-                    <button
-                        onClick={handleApplyPaint}
-                        disabled={!hasPendingChanges}
-                        className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-2
+                    {/* Footer - Compact & Inline */}
+                    <div className="pt-2 space-y-3">
+                        <button
+                            onClick={handleApplyPaint}
+                            disabled={!hasPendingChanges}
+                            className={`w-full py-3.5 rounded-xl font-bold text-xs tracking-[0.2em] uppercase transition-all flex items-center justify-center gap-2
                             ${hasPendingChanges
-                                ? 'bg-red-600 hover:bg-red-500 text-white translate-y-[-1px]'
-                                : 'bg-red-900/20 text-red-500/50 cursor-default'}`}
-                        style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
-                        {hasPendingChanges ? 'Apply Paint' : 'Applied'}
-                    </button>
+                                    ? 'bg-red-600 hover:bg-red-500 text-white translate-y-[-1px]'
+                                    : 'bg-red-900/20 text-red-500/50 cursor-default'}`}
+                            style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                            {hasPendingChanges ? 'Apply Paint' : 'Applied'}
+                        </button>
 
-                    <button
-                        onClick={handleReset}
-                        className="w-full text-center text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 hover:text-red-400 transition-colors py-2 flex items-center justify-center gap-2"
-                        style={{ fontFamily: 'Orbitron, sans-serif' }}
-                    >
-                        Reset
-                    </button>
+                        <button
+                            onClick={handleReset}
+                            className="w-full text-center text-[10px] uppercase tracking-[0.2em] font-bold text-gray-500 hover:text-red-400 transition-colors py-2 flex items-center justify-center gap-2"
+                            style={{ fontFamily: 'Orbitron, sans-serif' }}
+                        >
+                            Reset
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {/* Success Animation */}
-            <AnimatePresence>
-                {showSuccess && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
-                    >
-                        <div className="flex flex-col items-center">
-                            <CheckCircle size={48} className="text-red-500 mb-4" />
-                            <h2 className="text-xl font-bold text-white uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>Paint Applied</h2>
+                {/* Success Animation */}
+                <AnimatePresence>
+                    {showSuccess && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                        >
+                            <div className="flex flex-col items-center">
+                                <CheckCircle size={48} className="text-red-500 mb-4" />
+                                <h2 className="text-xl font-bold text-white uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>Paint Applied</h2>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+            </motion.div >
+
+            {/* RIGHT SIDE PANEL - Garage Pass */}
+            <motion.div
+                initial={{ x: 400, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30, delay: 0.1 }}
+                className="fixed right-8 top-24 w-80 h-[80vh] bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex flex-col shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-white/5"
+            >
+                {/* Header */}
+                <div className="p-6 pb-2">
+                    <h1 className="text-xl font-bold text-red-500 uppercase tracking-widest" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                        Garage Pass
+                    </h1>
+                    <div className="mt-2">
+                        <GarageCountdown showLabel={false} size="text-sm" align="items-start" />
+                    </div>
+                </div>
+
+                {/* Scrollable Content - Expanded Spacing */}
+                <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
+
+                    {/* 1. Part Colors - Expanded */}
+                    <div>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Part Colors
+                        </h3>
+                        <div className="filter blur-[2px] pointer-events-none select-none opacity-50">
+                            {/* Colors Grid - Larger Circles */}
+                            <div className="grid grid-cols-4 gap-4 mb-4">
+                                {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ffffff', '#000000'].map((color, i) => (
+                                    <div key={i} className="aspect-square rounded-full border-2 border-white/20 shadow-lg" style={{ backgroundColor: color }}></div>
+                                ))}
+                            </div>
+                            {/* Part Selection - Vertical Cards */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-2 aspect-[4/3]">
+                                    <Palette size={24} className="text-gray-400" />
+                                    <span className="text-white text-[10px] uppercase font-bold tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>Wheels</span>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col items-center justify-center gap-2 aspect-[4/3]">
+                                    <Palette size={24} className="text-gray-400" />
+                                    <span className="text-white text-[10px] uppercase font-bold tracking-wider" style={{ fontFamily: 'Orbitron, sans-serif' }}>Calipers</span>
+                                </div>
+                            </div>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    </div>
 
-        </motion.div >
+                    {/* Divider */}
+                    <div className="h-px w-full bg-white/5"></div>
+
+                    {/* 2. Add Vinyl - Larger Grid */}
+                    <div>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Add Vinyl
+                        </h3>
+                        <div className="filter blur-[2px] pointer-events-none select-none opacity-50">
+                            <div className="grid grid-cols-2 gap-3">
+                                {['Racing', 'Stripes', 'Flames', 'Camo', 'Carbon', '+ More'].map((label, i) => (
+                                    <div key={i} className="aspect-[3/2] bg-white/5 rounded-xl border border-white/10 flex flex-col items-center justify-center hover:bg-white/10 transition-colors">
+                                        <Sticker size={24} className="text-gray-500 mb-2" />
+                                        <span className="text-[10px] text-gray-500 font-bold uppercase">{label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px w-full bg-white/5"></div>
+
+                    {/* 3. Custom Wrap - Taller Upload Area */}
+                    <div>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Custom Wrap
+                        </h3>
+                        <div className="filter blur-[2px] pointer-events-none select-none opacity-50">
+                            <div className="w-full h-32 bg-white/5 rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center gap-3 hover:bg-white/10 transition-colors">
+                                <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                                    <Upload size={24} className="text-gray-400" />
+                                </div>
+                                <div className="text-center">
+                                    <span className="block text-xs text-gray-400 font-bold uppercase mb-1" style={{ fontFamily: 'Orbitron, sans-serif' }}>Upload Image</span>
+                                    <span className="text-[10px] text-gray-600">Supports PNG, JPG</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px w-full bg-white/5"></div>
+
+                    {/* 4. Decals & Stickers - Real Images */}
+                    <div>
+                        <h3 className="text-red-500 text-xs uppercase tracking-[0.2em] font-bold mb-4" style={{ fontFamily: 'Orbitron, sans-serif' }}>
+                            Decals & Stickers
+                        </h3>
+                        <div className="filter blur-[1px] pointer-events-none select-none opacity-60">
+                            <div className="grid grid-cols-2 gap-3">
+                                {/* Sticker 1: Flame */}
+                                <div className="aspect-square bg-white/5 rounded-xl border border-white/10 p-4 flex items-center justify-center overflow-hidden">
+                                    <img src="/stickers/sticker_flame.png" alt="Flame" className="w-full h-full object-contain grayscale opacity-70" />
+                                </div>
+                                {/* Sticker 2: Skull */}
+                                <div className="aspect-square bg-white/5 rounded-xl border border-white/10 p-4 flex items-center justify-center overflow-hidden">
+                                    <img src="/stickers/sticker_skull.png" alt="Skull" className="w-full h-full object-contain grayscale opacity-70" />
+                                </div>
+                                {/* Sticker 3: Sponsor */}
+                                <div className="aspect-square bg-white/5 rounded-xl border border-white/10 p-4 flex items-center justify-center overflow-hidden">
+                                    <img src="/stickers/sticker_sponsor.png" alt="Sponsor" className="w-full h-full object-contain grayscale opacity-70" />
+                                </div>
+                                {/* Sticker 4: Number */}
+                                <div className="aspect-square bg-white/5 rounded-xl border border-white/10 p-4 flex items-center justify-center overflow-hidden">
+                                    <img src="/stickers/sticker_number.png" alt="Number" className="w-full h-full object-contain grayscale opacity-70" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </motion.div>
+        </>
     );
 }
+
