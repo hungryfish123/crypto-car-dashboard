@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { verifyReferralCode } from '../dbServices';
 
-const AccessGate = ({ onUnlock, correctCode = ["M4UR0", "G7X29P", "B4M3K8", "W9R2Y5", "Q5L8J3", "Z1N6D4"] }) => {
+const AccessGate = ({ onUnlock, correctCode = ["M4UR0", "G7X29P", "B4M3K8", "W9R2Y5", "Q5L8J3", "Z1N6D4", "K9P2X4", "R5M8J1", "L3N7V9", "T6H2B5", "X8D4F2"] }) => {
     const [inputCode, setInputCode] = useState('');
     const [error, setError] = useState(false);
     const [isUnlocked, setIsUnlocked] = useState(false);
